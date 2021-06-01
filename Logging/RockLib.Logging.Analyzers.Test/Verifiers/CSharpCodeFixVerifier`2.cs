@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,6 +32,9 @@ namespace RockLib.Logging.Analyzers.Test
             var test = new Test
             {
                 TestCode = source,
+                ReferenceAssemblies = ReferenceAssemblies.Default
+                    .AddPackages(ImmutableArray.Create(
+                        new PackageIdentity("RockLib.Logging", "3.0.2")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
@@ -52,6 +56,9 @@ namespace RockLib.Logging.Analyzers.Test
             {
                 TestCode = source,
                 FixedCode = fixedSource,
+                ReferenceAssemblies = ReferenceAssemblies.Default
+                    .AddPackages(ImmutableArray.Create(
+                        new PackageIdentity("RockLib.Logging", "3.0.2")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
