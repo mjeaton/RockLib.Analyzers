@@ -37,8 +37,8 @@ namespace RockLib.Logging.Analyzers
 
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
-            var objectType = context.Compilation.GetTypeByMetadataName("System.Object");
-            if (objectType == null)
+            var enumType = context.Compilation.GetTypeByMetadataName("System.Enum");
+            if (enumType == null)
                 return;
 
             var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
@@ -57,7 +57,7 @@ namespace RockLib.Logging.Analyzers
             if (notSafeToLogAttributeType == null)
                 return;
 
-            var analyzer = new InvocationOperationAnalyzer(objectType, logEntryType,
+            var analyzer = new InvocationOperationAnalyzer(enumType, logEntryType,
                 safeLoggingExtensionsType, safeToLogAttributeType, notSafeToLogAttributeType);
 
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
@@ -65,16 +65,17 @@ namespace RockLib.Logging.Analyzers
 
         private class InvocationOperationAnalyzer
         {
-            private readonly INamedTypeSymbol _objectType;
+            private readonly INamedTypeSymbol _enumType;
             private readonly INamedTypeSymbol _logEntryType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
             private readonly INamedTypeSymbol _safeToLogAttributeType;
             private readonly INamedTypeSymbol _notSafeToLogAttributeType;
 
-            public InvocationOperationAnalyzer(INamedTypeSymbol objectType, INamedTypeSymbol logEntryType,
-                INamedTypeSymbol safeLoggingExtensionsType, INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType)
+            public InvocationOperationAnalyzer(INamedTypeSymbol enumType, INamedTypeSymbol logEntryType,
+                INamedTypeSymbol safeLoggingExtensionsType, INamedTypeSymbol safeToLogAttributeType,
+                INamedTypeSymbol notSafeToLogAttributeType)
             {
-                _objectType = objectType;
+                _enumType = enumType;
                 _logEntryType = logEntryType;
                 _safeLoggingExtensionsType = safeLoggingExtensionsType;
                 _safeToLogAttributeType = safeToLogAttributeType;
@@ -103,7 +104,7 @@ namespace RockLib.Logging.Analyzers
             {
                 var valueArgument = invocationOperation.Arguments[1];
                 if (valueArgument.Value is IConversionOperation convertToObjectType
-                    && SymbolEqualityComparer.Default.Equals(convertToObjectType.Type, _objectType))
+                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
                 {
                     AnalyzePropertyValue(context, convertToObjectType.Operand);
                 }
@@ -122,7 +123,7 @@ namespace RockLib.Logging.Analyzers
 
             private void AnalyzePropertyValue(OperationAnalysisContext context, IOperation propertyValue)
             {
-                if (propertyValue.Type is null)
+                if (propertyValue.Type is null || IsValueType(propertyValue.Type))
                     return;
 
                 if (IsDecoratedWithSafeToLogAttribute(propertyValue.Type))
@@ -151,7 +152,7 @@ namespace RockLib.Logging.Analyzers
                     return false;
 
                 if (extendedPropertiesArgument.Value is IConversionOperation convertToObjectType
-                    && SymbolEqualityComparer.Default.Equals(convertToObjectType.Type, _objectType))
+                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
                 {
                     anonymousObjectCreationOperation = convertToObjectType.Operand as IAnonymousObjectCreationOperation;
                 }
@@ -182,6 +183,47 @@ namespace RockLib.Logging.Analyzers
             private static IEnumerable<IPropertySymbol> GetPublicProperties(ITypeSymbol type) =>
                 type.GetMembers().OfType<IPropertySymbol>().Where(p =>
                     p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
+
+            private bool IsValueType(ITypeSymbol type)
+            {
+                switch (type.SpecialType)
+                {
+                    case SpecialType.System_String:
+                    case SpecialType.System_Boolean:
+                    case SpecialType.System_Char:
+                    case SpecialType.System_Int16:
+                    case SpecialType.System_Int32:
+                    case SpecialType.System_Int64:
+                    case SpecialType.System_UInt16:
+                    case SpecialType.System_UInt32:
+                    case SpecialType.System_UInt64:
+                    case SpecialType.System_Byte:
+                    case SpecialType.System_SByte:
+                    case SpecialType.System_Single:
+                    case SpecialType.System_Double:
+                    case SpecialType.System_Decimal:
+                    case SpecialType.System_DateTime:
+                    case SpecialType.System_IntPtr:
+                    case SpecialType.System_UIntPtr:
+                        return true;
+                }
+
+                if (SymbolEqualityComparer.Default.Equals(type.BaseType, _enumType))
+                    return true;
+
+                switch (type.ToString())
+                {
+                    case "System.TimeSpan":
+                    case "System.DateTimeOffset":
+                    case "System.Guid":
+                    case "System.Uri":
+                    case "System.Type":
+                    case "System.Text.Encoding":
+                        return true;
+                }
+
+                return false;
+            }
         }
     }
 }
