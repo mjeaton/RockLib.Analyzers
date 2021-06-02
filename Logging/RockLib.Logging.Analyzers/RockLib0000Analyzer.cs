@@ -1,7 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -20,6 +19,10 @@ namespace RockLib.Logging.Analyzers
 
             context.RegisterCompilationStartAction(c =>
             {
+                var objectType = c.Compilation.GetTypeByMetadataName("System.Object");
+                if (objectType == null)
+                    return;
+
                 var logEntryType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
                 if (logEntryType == null)
                     return;
@@ -28,123 +31,141 @@ namespace RockLib.Logging.Analyzers
                 if (safeLoggingExtensionsType == null)
                     return;
 
-                c.RegisterOperationAction(cx =>
-                    AnalyzeInvocationOperation(cx, logEntryType, safeLoggingExtensionsType),
+                var safeToLogAttributeType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeToLogAttribute");
+                if (safeToLogAttributeType == null)
+                    return;
+
+                var notSafeToLogAttributeType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.NotSafeToLogAttribute");
+                if (notSafeToLogAttributeType == null)
+                    return;
+
+                var analyzer = new InvocationOperationAnalyzer(objectType, logEntryType,
+                    safeLoggingExtensionsType, safeToLogAttributeType, notSafeToLogAttributeType);
+
+                c.RegisterOperationAction(
+                    analyzer.Analyze,
                     OperationKind.Invocation);
             });
         }
 
-        private void AnalyzeInvocationOperation(OperationAnalysisContext context,
-            INamedTypeSymbol logEntryType, INamedTypeSymbol safeLoggingExtensionsType)
+        private class InvocationOperationAnalyzer
         {
-            var invocationOperation = (IInvocationOperation)context.Operation;
-            var methodSymbol = invocationOperation.TargetMethod;
+            private readonly INamedTypeSymbol _objectType;
+            private readonly INamedTypeSymbol _logEntryType;
+            private readonly INamedTypeSymbol _safeLoggingExtensionsType;
+            private readonly INamedTypeSymbol _safeToLogAttributeType;
+            private readonly INamedTypeSymbol _notSafeToLogAttributeType;
 
-            if (methodSymbol.MethodKind != MethodKind.Ordinary)
-                return;
-
-            if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, safeLoggingExtensionsType))
-                AnalyzeSanitizingLoggingExtensionMethodCall(context, invocationOperation);
-            else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, logEntryType))
-                if (methodSymbol.Name == "SetSanitizedExtendedProperty")
-                    AnalyzeSetSanitizedExtendedPropertyMethodCall(context, invocationOperation);
-                else if (methodSymbol.Name == "SetSanitizedExtendedProperties")
-                    AnalyzeSetSanitizedExtendedPropertiesMethodCall(context, invocationOperation);
-        }
-
-        private void AnalyzeSetSanitizedExtendedPropertyMethodCall(OperationAnalysisContext context,
-            IInvocationOperation invocationOperation)
-        {
-            var valueArgument = invocationOperation.Arguments[1];
-            if (valueArgument.Value is IConversionOperation convertToObjectType
-                && convertToObjectType.Type.Name == nameof(Object)
-                && convertToObjectType.Type.ContainingNamespace?.Name == "System")
+            public InvocationOperationAnalyzer(INamedTypeSymbol objectType, INamedTypeSymbol logEntryType,
+                INamedTypeSymbol safeLoggingExtensionsType, INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType)
             {
-                AnalyzePropertyType(context, convertToObjectType.Operand.Type, convertToObjectType.Operand);
+                _objectType = objectType;
+                _logEntryType = logEntryType;
+                _safeLoggingExtensionsType = safeLoggingExtensionsType;
+                _safeToLogAttributeType = safeToLogAttributeType;
+                _notSafeToLogAttributeType = notSafeToLogAttributeType;
             }
-        }
 
-        private void AnalyzeSetSanitizedExtendedPropertiesMethodCall(OperationAnalysisContext context,
-            IInvocationOperation invocationOperation)
-        {
-            AnalyzeExtendedPropertiesArgument(context, invocationOperation);
-        }
-
-        private void AnalyzeSanitizingLoggingExtensionMethodCall(OperationAnalysisContext context,
-            IInvocationOperation invocationOperation)
-        {
-            AnalyzeExtendedPropertiesArgument(context, invocationOperation);
-        }
-
-        private void AnalyzeExtendedPropertiesArgument(OperationAnalysisContext context, IInvocationOperation invocationOperation)
-        {
-            var extendedPropertiesArgument = GetExtendedPropertiesArgument(invocationOperation);
-
-            if (extendedPropertiesArgument?.Value is IConversionOperation convertToObjectType
-                && convertToObjectType.Type.Name == nameof(Object)
-                && convertToObjectType.Type.ContainingNamespace?.Name == "System"
-                && convertToObjectType.Operand is IAnonymousObjectCreationOperation createAnonymousObject)
+            public void Analyze(OperationAnalysisContext context)
             {
-                foreach (ISimpleAssignmentOperation initializer in createAnonymousObject.Initializers)
+                var invocationOperation = (IInvocationOperation)context.Operation;
+                var methodSymbol = invocationOperation.TargetMethod;
+
+                if (methodSymbol.MethodKind != MethodKind.Ordinary)
+                    return;
+
+                if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
+                    AnalyzeExtendedPropertiesArgument(context, invocationOperation);
+                else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _logEntryType))
+                    if (methodSymbol.Name == "SetSanitizedExtendedProperty")
+                        AnalyzeSetSanitizedExtendedPropertyMethodCall(context, invocationOperation);
+                    else if (methodSymbol.Name == "SetSanitizedExtendedProperties")
+                        AnalyzeExtendedPropertiesArgument(context, invocationOperation);
+            }
+
+            private void AnalyzeSetSanitizedExtendedPropertyMethodCall(OperationAnalysisContext context,
+                IInvocationOperation invocationOperation)
+            {
+                var valueArgument = invocationOperation.Arguments[1];
+                if (valueArgument.Value is IConversionOperation convertToObjectType
+                    && SymbolEqualityComparer.Default.Equals(convertToObjectType.Type, _objectType))
                 {
-                    string propertyTypeName = $"{initializer.Type.ContainingNamespace?.Name}.{initializer.Type.Name}";
-                    var propertyType = context.Compilation.GetTypeByMetadataName(propertyTypeName);
-                    if (propertyType != null)
-                        AnalyzePropertyType(context, propertyType, initializer.Value);
+                    AnalyzePropertyValue(context, convertToObjectType.Operand);
+                }
+                else
+                {
+                    // TODO: Is it worth looking for the type of the value anywhere else?
                 }
             }
-        }
 
-        private void AnalyzePropertyType(OperationAnalysisContext context, ITypeSymbol propertyType, IOperation propertyValue)
-        {
-            if (propertyType is INamedTypeSymbol namedTypeSymbol)
-                AnalyzePropertyType(context, namedTypeSymbol, propertyValue);
-        }
-
-        private void AnalyzePropertyType(OperationAnalysisContext context, INamedTypeSymbol namedType, IOperation propertyValue)
-        {
-            if (IsDecoratedWithSafeToLogAttribute(namedType))
+            private void AnalyzeExtendedPropertiesArgument(OperationAnalysisContext context, IInvocationOperation invocationOperation)
             {
-                if (GetPublicProperties(namedType).Any(IsNotDecoratedWithNotSafeToLogAttribute))
+                if (TryGetAnonymousObjectCreationOperation(invocationOperation, out var anonymousObjectCreationOperation))
+                    foreach (ISimpleAssignmentOperation initializer in anonymousObjectCreationOperation.Initializers)
+                        AnalyzePropertyValue(context, initializer.Value);
+            }
+
+            private void AnalyzePropertyValue(OperationAnalysisContext context, IOperation propertyValue)
+            {
+                if (propertyValue.Type is null)
                     return;
+
+                if (IsDecoratedWithSafeToLogAttribute(propertyValue.Type))
+                {
+                    if (GetPublicProperties(propertyValue.Type).Any(IsNotDecoratedWithNotSafeToLogAttribute))
+                        return;
+                }
+                else
+                {
+                    if (GetPublicProperties(propertyValue.Type).Any(IsDecoratedWithSafeToLogAttribute))
+                        return;
+                }
 
                 var diagnostic = Diagnostic.Create(Rules.RockLib0000, propertyValue.Syntax.GetLocation());
                 context.ReportDiagnostic(diagnostic);
             }
-            else
+
+            private bool TryGetAnonymousObjectCreationOperation(IInvocationOperation invocationOperation,
+                out IAnonymousObjectCreationOperation anonymousObjectCreationOperation)
             {
-                if (GetPublicProperties(namedType).Any(IsDecoratedWithSafeToLogAttribute))
-                    return;
+                anonymousObjectCreationOperation = null;
 
-                var diagnostic = Diagnostic.Create(Rules.RockLib0000, propertyValue.Syntax.GetLocation());
-                context.ReportDiagnostic(diagnostic);
+                var extendedPropertiesArgument = GetExtendedPropertiesArgument();
+                if (extendedPropertiesArgument == null)
+                    return false;
+
+                if (extendedPropertiesArgument.Value is IConversionOperation convertToObjectType
+                    && SymbolEqualityComparer.Default.Equals(convertToObjectType.Type, _objectType))
+                {
+                    anonymousObjectCreationOperation = convertToObjectType.Operand as IAnonymousObjectCreationOperation;
+                }
+                else
+                {
+                    // TODO: Is it worth looking for the anonymousObjectCreationOperation anywhere else?
+                }
+
+                return anonymousObjectCreationOperation != null;
+
+                IArgumentOperation GetExtendedPropertiesArgument()
+                {
+                    for (int i = 0; i < invocationOperation.TargetMethod.Parameters.Length; i++)
+                        if (invocationOperation.TargetMethod.Parameters[i].Name == "extendedProperties")
+                            return invocationOperation.Arguments[i];
+                    return null;
+                }
             }
-        }
 
-        private static bool IsDecoratedWithSafeToLogAttribute(ISymbol symbol) =>
-            symbol.GetAttributes().Any(attr =>
-                attr.AttributeClass?.Name == "SafeToLogAttribute"
-                && attr.AttributeClass?.ContainingNamespace.Name == "SafeLogging"
-                && attr.AttributeClass?.ContainingNamespace.ContainingNamespace.Name == "Logging"
-                && attr.AttributeClass?.ContainingNamespace.ContainingNamespace.ContainingNamespace.Name == "RockLib");
+            private bool IsDecoratedWithSafeToLogAttribute(ISymbol symbol) =>
+                symbol.GetAttributes().Any(attribute =>
+                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _safeToLogAttributeType));
 
-        private static bool IsNotDecoratedWithNotSafeToLogAttribute(ISymbol symbol) =>
-            !symbol.GetAttributes().Any(attr =>
-                attr.AttributeClass?.Name == "NotSafeToLogAttribute"
-                && attr.AttributeClass?.ContainingNamespace.Name == "SafeLogging"
-                && attr.AttributeClass?.ContainingNamespace.ContainingNamespace.Name == "Logging"
-                && attr.AttributeClass?.ContainingNamespace.ContainingNamespace.ContainingNamespace.Name == "RockLib");
+            private bool IsNotDecoratedWithNotSafeToLogAttribute(ISymbol symbol) =>
+                !symbol.GetAttributes().Any(attribute =>
+                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _notSafeToLogAttributeType));
 
-        private static IEnumerable<IPropertySymbol> GetPublicProperties(INamedTypeSymbol namedType) =>
-            namedType.GetMembers().OfType<IPropertySymbol>().Where(p =>
-                !p.IsIndexer && p.DeclaredAccessibility == Accessibility.Public);
-
-        private static IArgumentOperation GetExtendedPropertiesArgument(IInvocationOperation invocationOperation)
-        {
-            for (int i = 0; i < invocationOperation.TargetMethod.Parameters.Length; i++)
-                if (invocationOperation.TargetMethod.Parameters[i].Name == "extendedProperties")
-                    return invocationOperation.Arguments[i];
-            return null;
+            private static IEnumerable<IPropertySymbol> GetPublicProperties(ITypeSymbol type) =>
+                type.GetMembers().OfType<IPropertySymbol>().Where(p =>
+                    p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
         }
     }
 }
