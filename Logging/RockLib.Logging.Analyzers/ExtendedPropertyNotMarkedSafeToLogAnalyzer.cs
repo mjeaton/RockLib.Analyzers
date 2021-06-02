@@ -8,44 +8,59 @@ using System.Linq;
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class RockLib0000Analyzer : DiagnosticAnalyzer
+    public class ExtendedPropertyNotMarkedSafeToLogAnalyzer : DiagnosticAnalyzer
     {
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rules.RockLib0000);
+        private static readonly LocalizableString _title = "Extended property is not marked as safe to log";
+        private static readonly LocalizableString _messageFormat = "The '{0}' type does not have any properties marked as safe to log";
+        private static readonly LocalizableString _description = "The value of a sanitized extended property should have a type with one or more properties decorated with the [SafeToLog] or else be decorated with the [SafeToLog] attribute itself.";
+
+        public const string DiagnosticId = DiagnosticIds.ExtendedPropertyNotMarkedSafeToLogRuleId;
+
+        public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+            DiagnosticId,
+            _title,
+            _messageFormat,
+            DiagnosticCategory.Usage,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: _description,
+            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticId));
+
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
+            context.RegisterCompilationStartAction(OnCompilationStart);
+        }
 
-            context.RegisterCompilationStartAction(c =>
-            {
-                var objectType = c.Compilation.GetTypeByMetadataName("System.Object");
-                if (objectType == null)
-                    return;
+        private static void OnCompilationStart(CompilationStartAnalysisContext context)
+        {
+            var objectType = context.Compilation.GetTypeByMetadataName("System.Object");
+            if (objectType == null)
+                return;
 
-                var logEntryType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
-                if (logEntryType == null)
-                    return;
+            var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
+            if (logEntryType == null)
+                return;
 
-                var safeLoggingExtensionsType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
-                if (safeLoggingExtensionsType == null)
-                    return;
+            var safeLoggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
+            if (safeLoggingExtensionsType == null)
+                return;
 
-                var safeToLogAttributeType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeToLogAttribute");
-                if (safeToLogAttributeType == null)
-                    return;
+            var safeToLogAttributeType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeToLogAttribute");
+            if (safeToLogAttributeType == null)
+                return;
 
-                var notSafeToLogAttributeType = c.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.NotSafeToLogAttribute");
-                if (notSafeToLogAttributeType == null)
-                    return;
+            var notSafeToLogAttributeType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.NotSafeToLogAttribute");
+            if (notSafeToLogAttributeType == null)
+                return;
 
-                var analyzer = new InvocationOperationAnalyzer(objectType, logEntryType,
-                    safeLoggingExtensionsType, safeToLogAttributeType, notSafeToLogAttributeType);
+            var analyzer = new InvocationOperationAnalyzer(objectType, logEntryType,
+                safeLoggingExtensionsType, safeToLogAttributeType, notSafeToLogAttributeType);
 
-                c.RegisterOperationAction(
-                    analyzer.Analyze,
-                    OperationKind.Invocation);
-            });
+            context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
         private class InvocationOperationAnalyzer
@@ -121,7 +136,8 @@ namespace RockLib.Logging.Analyzers
                         return;
                 }
 
-                var diagnostic = Diagnostic.Create(Rules.RockLib0000, propertyValue.Syntax.GetLocation());
+                // "The '{0}' type does not have any properties marked as safe to log"
+                var diagnostic = Diagnostic.Create(Rule, propertyValue.Syntax.GetLocation(), propertyValue.Type);
                 context.ReportDiagnostic(diagnostic);
             }
 

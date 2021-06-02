@@ -1,12 +1,12 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Analyzers.RockLib0000Analyzer>;
+    RockLib.Logging.Analyzers.ExtendedPropertyNotMarkedSafeToLogAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
     [TestClass]
-    public class RockLib0000AnalyzerTests
+    public class ExtendedPropertyNotMarkedSafeToLogAnalyzerTests
     {
         [TestMethod]
         public async Task Analyzer1()
