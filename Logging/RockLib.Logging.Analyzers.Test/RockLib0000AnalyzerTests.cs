@@ -20,9 +20,8 @@ namespace AnalyzerTests
     {
         public string Bar { get; set; }
 
-        public void Baz()
+        public void Baz(LogEntry logEntry)
         {
-            var logEntry = new LogEntry();
             logEntry.SetSanitizedExtendedProperty(""foo"", [|this|]);
         }
     }
@@ -41,9 +40,8 @@ namespace AnalyzerTests
     {
         public string Bar { get; set; }
 
-        public void Baz()
+        public void Baz(LogEntry logEntry)
         {
-            var logEntry = new LogEntry();
             logEntry.SetSanitizedExtendedProperties(new { foo = [|this|] });
         }
     }
@@ -85,9 +83,8 @@ namespace AnalyzerTests
         [SafeToLog]
         public string Bar { get; set; }
 
-        public void Baz()
+        public void Baz(LogEntry logEntry)
         {
-            var logEntry = new LogEntry();
             logEntry.SetSanitizedExtendedProperty(""foo"", this);
         }
     }
@@ -108,9 +105,8 @@ namespace AnalyzerTests
         [SafeToLog]
         public string Bar { get; set; }
 
-        public void Baz()
+        public void Baz(LogEntry logEntry)
         {
-            var logEntry = new LogEntry();
             logEntry.SetSanitizedExtendedProperties(new { foo = this });
         }
     }
