@@ -70,6 +70,50 @@ namespace AnalyzerTests
         }
 
         [TestMethod]
+        public async Task Analyzer4()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+
+namespace AnalyzerTests
+{
+    public class Foo
+    {
+        public string Bar { get; set; }
+
+        public void Baz(LogEntry logEntry)
+        {
+            var properties = new { foo = [|this|] };
+            logEntry.SetSanitizedExtendedProperties(properties);
+        }
+    }
+}");
+        }
+
+        [TestMethod]
+        public async Task Analyzer5()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+
+namespace AnalyzerTests
+{
+    public class Foo
+    {
+        public string Bar { get; set; }
+
+        public void Baz(ILogger logger)
+        {
+            var properties = new { foo = [|this|] };
+            logger.DebugSanitized(""Hello, world!"", properties);
+        }
+    }
+}");
+        }
+
+        [TestMethod]
         public async Task NoDiagnostics1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
@@ -135,6 +179,52 @@ namespace AnalyzerTests
 }");
         }
 
+        [TestMethod]
+        public async Task NoDiagnostics4()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+
+namespace AnalyzerTests
+{
+    public class Foo
+    {
+        [SafeToLog]
+        public string Bar { get; set; }
+
+        public void Baz(LogEntry logEntry)
+        {
+            var properties = new { foo = this };
+            logEntry.SetSanitizedExtendedProperties(properties);
+        }
+    }
+}");
+        }
+
+        [TestMethod]
+        public async Task NoDiagnostics5()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+
+namespace AnalyzerTests
+{
+    public class Foo
+    {
+        [SafeToLog]
+        public string Bar { get; set; }
+
+        public void Baz(ILogger logger)
+        {
+            var properties = new { foo = this };
+            logger.DebugSanitized(""Hello, world!"", properties);
+        }
+    }
+}");
+        }
+
         [DataTestMethod]
         [DataRow("string")]
         [DataRow("bool")]
@@ -160,10 +250,11 @@ namespace AnalyzerTests
         [DataRow("Uri")]
         [DataRow("Encoding")]
         [DataRow("Type")]
-        public async Task NoDiagnostics4(string propertyType)
+        public async Task NoDiagnostics6(string propertyType)
         {
             await RockLibVerifier.VerifyAnalyzerAsync(string.Format(@"
 using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
 using System;
 using System.Text;
 
@@ -171,11 +262,11 @@ namespace AnalyzerTests
 {{
     public class Foo
     {{
-        public string Bar {{ get; set; }}
-
-        public void Baz(LogEntry logEntry, {0} foo)
+        public void Baz(ILogger logger, LogEntry logEntry, {0} foo)
         {{
             logEntry.SetSanitizedExtendedProperty(""foo"", foo);
+            logEntry.SetSanitizedExtendedProperties(new {{ foo }});
+            logger.DebugSanitized(""Hello, world!"", new {{ foo }});
         }}
     }}
 

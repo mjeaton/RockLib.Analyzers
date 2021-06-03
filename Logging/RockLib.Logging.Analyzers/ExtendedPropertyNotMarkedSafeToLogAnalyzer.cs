@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using System.Collections.Generic;
@@ -152,13 +153,35 @@ namespace RockLib.Logging.Analyzers
                     return false;
 
                 if (extendedPropertiesArgument.Value is IConversionOperation convertToObjectType
-                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
+                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object
+                    && convertToObjectType.Operand.Type.IsAnonymousType)
                 {
                     anonymousObjectCreationOperation = convertToObjectType.Operand as IAnonymousObjectCreationOperation;
-                }
-                else
-                {
-                    // TODO: Is it worth looking for the anonymousObjectCreationOperation anywhere else?
+
+                    if (anonymousObjectCreationOperation is null
+                        && convertToObjectType.Operand is ILocalReferenceOperation localReferenceOperation)
+                    {
+                        var semanticModel = localReferenceOperation.SemanticModel;
+                        var dataflow = semanticModel.AnalyzeDataFlow(localReferenceOperation.Syntax);
+
+                        anonymousObjectCreationOperation =
+                            dataflow.DataFlowsIn
+                                .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetAnonymousObjectCreationOperation))
+                                .FirstOrDefault(operation => operation != null);
+
+                        IAnonymousObjectCreationOperation GetAnonymousObjectCreationOperation(SyntaxReference syntaxReference)
+                        {
+                            var syntax = syntaxReference.GetSyntax();
+
+                            if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
+                                && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
+                            {
+                                return variableInitializerOperation.Value as IAnonymousObjectCreationOperation;
+                            }
+
+                            return null;
+                        }
+                    }
                 }
 
                 return anonymousObjectCreationOperation != null;
