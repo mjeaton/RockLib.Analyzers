@@ -15,17 +15,15 @@ namespace RockLib.Logging.Analyzers
         private static readonly LocalizableString _messageFormat = "The '{0}' type does not have any properties marked as safe to log";
         private static readonly LocalizableString _description = "The value of a sanitized extended property should have a type with one or more properties decorated with the [SafeToLog] or else be decorated with the [SafeToLog] attribute itself.";
 
-        public const string DiagnosticId = DiagnosticIds.ExtendedPropertyNotMarkedSafeToLogRuleId;
-
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-            DiagnosticId,
+            DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog,
             _title,
             _messageFormat,
             DiagnosticCategory.Usage,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticId));
+            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -108,10 +106,6 @@ namespace RockLib.Logging.Analyzers
                     && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
                 {
                     AnalyzePropertyValue(context, convertToObjectType.Operand);
-                }
-                else
-                {
-                    // TODO: Is it worth looking for the type of the value anywhere else?
                 }
             }
 
