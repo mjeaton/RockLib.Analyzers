@@ -1,7 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -105,18 +107,44 @@ namespace RockLib.Logging.Analyzers
                 if (valueArgument.Value is IConversionOperation convertToObjectType
                     && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
                 {
-                    AnalyzePropertyValue(context, convertToObjectType.Operand);
+                    AnalyzePropertyValue(convertToObjectType.Operand, context.ReportDiagnostic);
                 }
             }
 
             private void AnalyzeExtendedPropertiesArgument(OperationAnalysisContext context, IInvocationOperation invocationOperation)
             {
-                if (TryGetAnonymousObjectCreationOperation(invocationOperation, out var anonymousObjectCreationOperation))
+                var extendedPropertiesArgument = GetExtendedPropertiesArgument();
+                if (extendedPropertiesArgument == null
+                    || !(extendedPropertiesArgument.Value is IConversionOperation convertToObjectType)
+                    || convertToObjectType.Type.SpecialType != SpecialType.System_Object)
+                {
+                    return;
+                }
+
+                var extendedPropertiesArgumentValue = convertToObjectType.Operand;
+
+                if (TryGetAnonymousObjectCreationOperation(extendedPropertiesArgumentValue, out var anonymousObjectCreationOperation))
+                {
                     foreach (ISimpleAssignmentOperation initializer in anonymousObjectCreationOperation.Initializers)
-                        AnalyzePropertyValue(context, initializer.Value);
+                        AnalyzePropertyValue(initializer.Value, context.ReportDiagnostic);
+                }
+                else if (IsStringDictionaryVariable(extendedPropertiesArgumentValue))
+                {
+                    var dictionaryExtendedPropertyValues = GetDictionaryExtendedPropertyValueOperations(invocationOperation, extendedPropertiesArgumentValue);
+                    foreach (var extendedPropertyValue in dictionaryExtendedPropertyValues)
+                        AnalyzePropertyValue(extendedPropertyValue, context.ReportDiagnostic);
+                }
+
+                IArgumentOperation GetExtendedPropertiesArgument()
+                {
+                    for (int i = 0; i < invocationOperation.TargetMethod.Parameters.Length; i++)
+                        if (invocationOperation.TargetMethod.Parameters[i].Name == "extendedProperties")
+                            return invocationOperation.Arguments[i];
+                    return null;
+                }
             }
 
-            private void AnalyzePropertyValue(OperationAnalysisContext context, IOperation propertyValue)
+            private void AnalyzePropertyValue(IOperation propertyValue, Action<Diagnostic> reportDiagnostic)
             {
                 if (propertyValue.Type is null || IsValueType(propertyValue.Type))
                     return;
@@ -134,26 +162,20 @@ namespace RockLib.Logging.Analyzers
 
                 // "The '{0}' type does not have any properties marked as safe to log"
                 var diagnostic = Diagnostic.Create(Rule, propertyValue.Syntax.GetLocation(), propertyValue.Type);
-                context.ReportDiagnostic(diagnostic);
+                reportDiagnostic(diagnostic);
             }
 
-            private bool TryGetAnonymousObjectCreationOperation(IInvocationOperation invocationOperation,
+            private bool TryGetAnonymousObjectCreationOperation(IOperation extendedPropertiesArgumentValue,
                 out IAnonymousObjectCreationOperation anonymousObjectCreationOperation)
             {
                 anonymousObjectCreationOperation = null;
 
-                var extendedPropertiesArgument = GetExtendedPropertiesArgument();
-                if (extendedPropertiesArgument == null)
-                    return false;
-
-                if (extendedPropertiesArgument.Value is IConversionOperation convertToObjectType
-                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object
-                    && convertToObjectType.Operand.Type.IsAnonymousType)
+                if (extendedPropertiesArgumentValue.Type.IsAnonymousType)
                 {
-                    anonymousObjectCreationOperation = convertToObjectType.Operand as IAnonymousObjectCreationOperation;
+                    anonymousObjectCreationOperation = extendedPropertiesArgumentValue as IAnonymousObjectCreationOperation;
 
                     if (anonymousObjectCreationOperation is null
-                        && convertToObjectType.Operand is ILocalReferenceOperation localReferenceOperation)
+                        && extendedPropertiesArgumentValue is ILocalReferenceOperation localReferenceOperation)
                     {
                         var semanticModel = localReferenceOperation.SemanticModel;
                         var dataflow = semanticModel.AnalyzeDataFlow(localReferenceOperation.Syntax);
@@ -179,13 +201,108 @@ namespace RockLib.Logging.Analyzers
                 }
 
                 return anonymousObjectCreationOperation != null;
+            }
 
-                IArgumentOperation GetExtendedPropertiesArgument()
+            private bool IsStringDictionaryVariable(IOperation extendedPropertiesArgumentValue) =>
+                extendedPropertiesArgumentValue is ILocalReferenceOperation
+                && extendedPropertiesArgumentValue.Type.Interfaces.Any(i =>
+                       i.Name == "IDictionary"
+                           && i.IsGenericType
+                           && i.TypeArguments.Length == 2
+                           && i.TypeArguments[0].SpecialType == SpecialType.System_String);
+
+            private IEnumerable<IOperation> GetDictionaryExtendedPropertyValueOperations(IInvocationOperation invocationOperation,
+                IOperation extendedPropertiesArgumentValue)
+            {
+                var extendedPropertiesSymbol = ((ILocalReferenceOperation)extendedPropertiesArgumentValue).Local;
+
+                IOperation rootOperation = invocationOperation;
+                while (rootOperation.Parent != null)
+                    rootOperation = rootOperation.Parent;
+
+                var descendants = rootOperation.Syntax.DescendantNodes(rootOperation.Syntax.GetLocation().SourceSpan);
+
+                var addMethodValues = descendants
+                    .Where(node => node.IsKind(SyntaxKind.InvocationExpression))
+                    .Select(TryGetDictionaryAddMethodValue);
+
+                var indexerAssignmentValues = descendants
+                    .Where(node => node.IsKind(SyntaxKind.ExpressionStatement))
+                    .Select(TryGetDictionaryIndexerAssignmentValue);
+
+                var localDeclarationCollectionInitializerValues = descendants
+                    .Where(node => node.IsKind(SyntaxKind.LocalDeclarationStatement))
+                    .SelectMany(TryGetLocalDeclarationCollectionInitializerValues);
+
+                var extendedPropertyValues = addMethodValues
+                    .Concat(indexerAssignmentValues)
+                    .Concat(localDeclarationCollectionInitializerValues)
+                    .Where(value => value != null)
+                    .Select(operation =>
+                    {
+                        if (operation is IConversionOperation conversionOperation)
+                            return conversionOperation.Operand;
+                        return operation;
+                    });
+
+                return extendedPropertyValues;
+
+                IOperation TryGetDictionaryAddMethodValue(SyntaxNode node)
                 {
-                    for (int i = 0; i < invocationOperation.TargetMethod.Parameters.Length; i++)
-                        if (invocationOperation.TargetMethod.Parameters[i].Name == "extendedProperties")
-                            return invocationOperation.Arguments[i];
+                    if (rootOperation.SemanticModel.GetOperation(node) is IInvocationOperation operation
+                        && operation.TargetMethod.Name == "Add"
+                        && operation.TargetMethod.Parameters.Length == 2
+                        && operation.Instance is ILocalReferenceOperation localReference
+                        && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol))
+                    {
+                        return operation.Arguments[1].Value;
+                    }
                     return null;
+                }
+
+                IOperation TryGetDictionaryIndexerAssignmentValue(SyntaxNode node)
+                {
+                    if (((ExpressionStatementSyntax)node).Expression is AssignmentExpressionSyntax assignmentExpression
+                        && rootOperation.SemanticModel.GetOperation(assignmentExpression) is ISimpleAssignmentOperation assignmentOperation
+                        && assignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation
+                        && propertyReferenceOperation.Instance is ILocalReferenceOperation localReference
+                        && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol)
+                        && propertyReferenceOperation.Arguments.Length == 1
+                        && propertyReferenceOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String)
+                    {
+                        return assignmentOperation.Value;
+                    }
+                    return null;
+                }
+
+                IEnumerable<IOperation> TryGetLocalDeclarationCollectionInitializerValues(SyntaxNode node)
+                {
+                    var declaration = ((LocalDeclarationStatementSyntax)node).Declaration;
+                    foreach (var variable in declaration.Variables)
+                    {
+                        var variableDeclarator = (IVariableDeclaratorOperation)rootOperation.SemanticModel.GetOperation(variable);
+                        if (SymbolEqualityComparer.Default.Equals(variableDeclarator.Symbol, extendedPropertiesSymbol)
+                            && variableDeclarator.Initializer?.Value is IObjectCreationOperation objectCreation
+                            && objectCreation.Initializer is IObjectOrCollectionInitializerOperation collectionInitializer)
+                        {
+                            foreach (var initializer in collectionInitializer.Initializers)
+                            {
+                                if (initializer is IInvocationOperation initializerInvocation
+                                    && initializerInvocation.TargetMethod.Name == "Add"
+                                    && initializerInvocation.Arguments.Length == 2)
+                                {
+                                    yield return initializerInvocation.Arguments[1].Value;
+                                }
+                                else if (initializer is ISimpleAssignmentOperation assignmentOperation
+                                    && assignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation
+                                    && propertyReferenceOperation.Arguments.Length == 1
+                                    && propertyReferenceOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String)
+                                {
+                                    yield return assignmentOperation.Value;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
