@@ -128,9 +128,8 @@ namespace RockLib.Logging.Analyzers
                     foreach (ISimpleAssignmentOperation initializer in anonymousObjectCreationOperation.Initializers)
                         AnalyzePropertyValue(initializer.Value, context.ReportDiagnostic);
                 }
-                else if (IsStringDictionaryVariable(extendedPropertiesArgumentValue))
+                else if (TryGetDictionaryExtendedPropertyValueOperations(extendedPropertiesArgumentValue, invocationOperation, out var dictionaryExtendedPropertyValues))
                 {
-                    var dictionaryExtendedPropertyValues = GetDictionaryExtendedPropertyValueOperations(invocationOperation, extendedPropertiesArgumentValue);
                     foreach (var extendedPropertyValue in dictionaryExtendedPropertyValues)
                         AnalyzePropertyValue(extendedPropertyValue, context.ReportDiagnostic);
                 }
@@ -203,6 +202,18 @@ namespace RockLib.Logging.Analyzers
                 return anonymousObjectCreationOperation != null;
             }
 
+            private bool TryGetDictionaryExtendedPropertyValueOperations(IOperation extendedPropertiesArgumentValue,
+                IInvocationOperation invocationOperation, out IEnumerable<IOperation> operations)
+            {
+                if (IsStringDictionaryVariable(extendedPropertiesArgumentValue))
+                {
+                    operations = GetDictionaryExtendedPropertyValueOperations(invocationOperation, extendedPropertiesArgumentValue);
+                    return true;
+                }
+                operations = Enumerable.Empty<IOperation>();
+                return false;
+            }
+
             private bool IsStringDictionaryVariable(IOperation extendedPropertiesArgumentValue) =>
                 extendedPropertiesArgumentValue is ILocalReferenceOperation
                 && extendedPropertiesArgumentValue.Type.Interfaces.Any(i =>
@@ -220,6 +231,7 @@ namespace RockLib.Logging.Analyzers
                 while (rootOperation.Parent != null)
                     rootOperation = rootOperation.Parent;
 
+                var semanticModel = rootOperation.SemanticModel;
                 var descendants = rootOperation.Syntax.DescendantNodes(rootOperation.Syntax.GetLocation().SourceSpan);
 
                 var addMethodValues = descendants
@@ -249,7 +261,7 @@ namespace RockLib.Logging.Analyzers
 
                 IOperation TryGetDictionaryAddMethodValue(SyntaxNode node)
                 {
-                    if (rootOperation.SemanticModel.GetOperation(node) is IInvocationOperation operation
+                    if (semanticModel.GetOperation(node) is IInvocationOperation operation
                         && operation.TargetMethod.Name == "Add"
                         && operation.TargetMethod.Parameters.Length == 2
                         && operation.Instance is ILocalReferenceOperation localReference
@@ -263,7 +275,7 @@ namespace RockLib.Logging.Analyzers
                 IOperation TryGetDictionaryIndexerAssignmentValue(SyntaxNode node)
                 {
                     if (((ExpressionStatementSyntax)node).Expression is AssignmentExpressionSyntax assignmentExpression
-                        && rootOperation.SemanticModel.GetOperation(assignmentExpression) is ISimpleAssignmentOperation assignmentOperation
+                        && semanticModel.GetOperation(assignmentExpression) is ISimpleAssignmentOperation assignmentOperation
                         && assignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation
                         && propertyReferenceOperation.Instance is ILocalReferenceOperation localReference
                         && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol)
@@ -280,7 +292,7 @@ namespace RockLib.Logging.Analyzers
                     var declaration = ((LocalDeclarationStatementSyntax)node).Declaration;
                     foreach (var variable in declaration.Variables)
                     {
-                        var variableDeclarator = (IVariableDeclaratorOperation)rootOperation.SemanticModel.GetOperation(variable);
+                        var variableDeclarator = (IVariableDeclaratorOperation)semanticModel.GetOperation(variable);
                         if (SymbolEqualityComparer.Default.Equals(variableDeclarator.Symbol, extendedPropertiesSymbol)
                             && variableDeclarator.Initializer?.Value is IObjectCreationOperation objectCreation
                             && objectCreation.Initializer is IObjectOrCollectionInitializerOperation collectionInitializer)
