@@ -8,477 +8,163 @@ namespace RockLib.Logging.Analyzers.Test
     [TestClass]
     public class ExtendedPropertyNotMarkedSafeToLogAnalyzerTests
     {
-        [TestMethod]
-        public async Task Analyzer1()
+        [TestMethod("Diagnostrics are reported when extended property type is not marked as safe to log")]
+        public async Task DiagnosticsReported1()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            logEntry.SetSanitizedExtendedProperty(""foo"", [|this|]);
-        }
-    }
-}");
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "Foo",
+                    shouldReportDiagnostic: true,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None));
         }
 
-        [TestMethod]
-        public async Task Analyzer2()
+        [TestMethod("Diagnostrics are reported when extended property type is decorated with [SafeToLog] but all properties are decorated with [NotSafeToLog]")]
+        public async Task DiagnosticsReported2()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            logEntry.SetSanitizedExtendedProperties(new { foo = [|this|] });
-        }
-    }
-}");
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "Foo",
+                    shouldReportDiagnostic: true,
+                    propertyDecoration: Decoration.NotSafeToLog,
+                    classDecoration: Decoration.SafeToLog));
         }
 
-        [TestMethod]
-        public async Task Analyzer3()
+        [TestMethod("No diagnostics are reported when extended property type has property decorated with [SafeToLog]")]
+        public async Task NoDiagnosticsReported1()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            logger.DebugSanitized(""Hello, world!"", new { foo = [|this|] });
-        }
-    }
-}");
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "Foo",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.SafeToLog,
+                    classDecoration: Decoration.None));
         }
 
-        [TestMethod]
-        public async Task Analyzer4()
+        [TestMethod("No diagnostics are reported when extended property type is decorated with [SafeToLog]")]
+        public async Task NoDiagnosticsReported2()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            var properties = new { foo = [|this|] };
-            logEntry.SetSanitizedExtendedProperties(properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task Analyzer5()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new { foo = [|this|] };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task Analyzer6()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>();
-            properties.Add(""foo"", [|this|]);
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task Analyzer7()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>();
-            properties[""foo""] = [|this|];
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task Analyzer8()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>
-            {
-                { ""foo"", [|this|] }
-            };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task Analyzer9()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>
-            {
-                [""foo""] = [|this|]
-            };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics1()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            logEntry.SetSanitizedExtendedProperty(""foo"", this);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics2()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            logEntry.SetSanitizedExtendedProperties(new { foo = this });
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics3()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            logger.DebugSanitized(""Hello, world!"", new { foo = this });
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics4()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(LogEntry logEntry)
-        {
-            var properties = new { foo = this };
-            logEntry.SetSanitizedExtendedProperties(properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics5()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new { foo = this };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics6()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>();
-            properties.Add(""foo"", this);
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics7()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>();
-            properties[""foo""] = this;
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics8()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>
-            {
-                { ""foo"", this }
-            };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
-        }
-
-        [TestMethod]
-        public async Task NoDiagnostics9()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System.Collections.Generic;
-
-namespace AnalyzerTests
-{
-    public class Foo
-    {
-        [SafeToLog]
-        public string Bar { get; set; }
-
-        public void Baz(ILogger logger)
-        {
-            var properties = new Dictionary<string, object>
-            {
-                [""foo""] = this
-            };
-            logger.DebugSanitized(""Hello, world!"", properties);
-        }
-    }
-}");
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "Foo",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.SafeToLog));
         }
 
         [DataTestMethod]
-        [DataRow("string")]
-        [DataRow("bool")]
-        [DataRow("char")]
-        [DataRow("short")]
-        [DataRow("int")]
-        [DataRow("long")]
-        [DataRow("ushort")]
-        [DataRow("uint")]
-        [DataRow("ulong")]
-        [DataRow("byte")]
-        [DataRow("sbyte")]
-        [DataRow("float")]
-        [DataRow("double")]
-        [DataRow("decimal")]
-        [DataRow("DateTime")]
-        [DataRow("IntPtr")]
-        [DataRow("UIntPtr")]
-        [DataRow("Garply")]
-        [DataRow("TimeSpan")]
-        [DataRow("DateTimeOffset")]
-        [DataRow("Guid")]
-        [DataRow("Uri")]
-        [DataRow("Encoding")]
-        [DataRow("Type")]
-        public async Task NoDiagnostics10(string propertyType)
+        [DataRow("string", DisplayName = "No diagnostics are reported for extended properties of type string")]
+        [DataRow("bool", DisplayName = "No diagnostics are reported for extended properties of type bool")]
+        [DataRow("char", DisplayName = "No diagnostics are reported for extended properties of type char")]
+        [DataRow("short", DisplayName = "No diagnostics are reported for extended properties of type short")]
+        [DataRow("int", DisplayName = "No diagnostics are reported for extended properties of type int")]
+        [DataRow("long", DisplayName = "No diagnostics are reported for extended properties of type long")]
+        [DataRow("ushort", DisplayName = "No diagnostics are reported for extended properties of type ushort")]
+        [DataRow("uint", DisplayName = "No diagnostics are reported for extended properties of type uint")]
+        [DataRow("ulong", DisplayName = "No diagnostics are reported for extended properties of type ulong")]
+        [DataRow("byte", DisplayName = "No diagnostics are reported for extended properties of type byte")]
+        [DataRow("sbyte", DisplayName = "No diagnostics are reported for extended properties of type sbyte")]
+        [DataRow("float", DisplayName = "No diagnostics are reported for extended properties of type float")]
+        [DataRow("double", DisplayName = "No diagnostics are reported for extended properties of type double")]
+        [DataRow("decimal", DisplayName = "No diagnostics are reported for extended properties of type decimal")]
+        [DataRow("DateTime", DisplayName = "No diagnostics are reported for extended properties of type DateTime")]
+        [DataRow("IntPtr", DisplayName = "No diagnostics are reported for extended properties of type IntPtr")]
+        [DataRow("UIntPtr", DisplayName = "No diagnostics are reported for extended properties of type UIntPtr")]
+        [DataRow("TimeSpan", DisplayName = "No diagnostics are reported for extended properties of type TimeSpan")]
+        [DataRow("DateTimeOffset", DisplayName = "No diagnostics are reported for extended properties of type DateTimeOffset")]
+        [DataRow("Guid", DisplayName = "No diagnostics are reported for extended properties of type Guid")]
+        [DataRow("Uri", DisplayName = "No diagnostics are reported for extended properties of type Uri")]
+        [DataRow("Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
+        [DataRow("Type", DisplayName = "No diagnostics are reported for extended properties of type Type")]
+        [DataRow("TypeCode", DisplayName = "No diagnostics are reported for extended properties of an enum type")]
+        public async Task NoDiagnosticsReported3(string extendedPropertyType)
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(string.Format(@"
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: extendedPropertyType,
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None));
+        }
+
+        private static string GetTestCode(string extendedPropertyType, bool shouldReportDiagnostic,
+            Decoration propertyDecoration, Decoration classDecoration)
+        {
+            string openDiagnostic = shouldReportDiagnostic ? "[|" : null;
+            string closeDiagnostic = shouldReportDiagnostic ? "|]" : null;
+            string propertyDecorationValue = propertyDecoration != Decoration.None ? $"[{propertyDecoration}]" : null;
+            string classDecorationValue = classDecoration != Decoration.None ? $"[{classDecoration}]" : null;
+
+            return string.Format(@"
 using RockLib.Logging;
 using RockLib.Logging.SafeLogging;
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace AnalyzerTests
 {{
+    {4}
     public class Foo
     {{
+        {3}
+        public string Bar {{ get; set; }}
+
         public void Baz(ILogger logger, LogEntry logEntry, {0} foo)
         {{
-            logEntry.SetSanitizedExtendedProperty(""foo"", foo);
-            logEntry.SetSanitizedExtendedProperties(new {{ foo }});
-            logger.DebugSanitized(""Hello, world!"", new {{ foo }});
+            // Setting a single extended property
+            logEntry.SetSanitizedExtendedProperty(""foo"", {1}foo{2});
+
+            // Setting extended properties in-line with an anonymous object
+            logEntry.SetSanitizedExtendedProperties(new {{ {1}foo{2} }});
+            logger.DebugSanitized(""Hello, world!"", new {{ {1}foo{2} }});
+
+            // Setting extended properties with an anonymous object variable
+            var properties1 = new {{ {1}foo{2} }};
+            logEntry.SetSanitizedExtendedProperties(properties1);
+
+            var properties2 = new {{ {1}foo{2} }};
+            logger.InfoSanitized(""Hello, world!"", properties2);
+
+            // Setting extended properties with a dictionary populated with Add method
+            var properties3 = new Dictionary<string, object>
+            {{
+                {{ ""foo"", {1}foo{2} }}
+            }};
+            properties3.Add(""bar"", {1}foo{2});
+            logEntry.SetSanitizedExtendedProperties(properties3);
+
+            var properties4 = new Dictionary<string, object>
+            {{
+                {{ ""foo"", {1}foo{2} }}
+            }};
+            properties4.Add(""bar"", {1}foo{2});
+            logger.WarnSanitized(""Hello, world!"", properties4);
+
+            // Setting extended properties with a dictionary populated with indexer
+            var properties5 = new Dictionary<string, object>
+            {{
+                [""foo""] = {1}foo{2}
+            }};
+            properties5[""bar""] = {1}foo{2};
+            logEntry.SetSanitizedExtendedProperties(properties5);
+
+            var properties6 = new Dictionary<string, object>
+            {{
+                [""foo""] = {1}foo{2}
+            }};
+            properties6[""bar""] = {1}foo{2};
+            logger.ErrorSanitized(""Hello, world!"", properties6);
         }}
     }}
+}}", extendedPropertyType, openDiagnostic, closeDiagnostic, propertyDecorationValue, classDecorationValue);
+        }
 
-    public enum Garply
-    {{
-        Grault
-    }}
-}}", propertyType));
+        private enum Decoration
+        {
+            None,
+            SafeToLog,
+            NotSafeToLog
         }
     }
 }
