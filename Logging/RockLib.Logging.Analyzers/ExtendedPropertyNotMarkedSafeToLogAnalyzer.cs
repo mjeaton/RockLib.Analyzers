@@ -10,7 +10,7 @@ namespace RockLib.Logging.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class ExtendedPropertyNotMarkedSafeToLogAnalyzer : DiagnosticAnalyzer
     {
-        private static readonly LocalizableString _title = "Extended property is not marked as safe to log";
+        private static readonly LocalizableString _title = "Extended property not marked as safe to log";
         private static readonly LocalizableString _messageFormat = "The '{0}' type does not have any properties marked as safe to log";
         private static readonly LocalizableString _description = "The value of a sanitized extended property should have a type with one or more properties decorated with the [SafeToLog] or else be decorated with the [SafeToLog] attribute itself.";
 

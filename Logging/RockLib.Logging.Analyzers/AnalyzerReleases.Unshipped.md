@@ -4,4 +4,4 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 RockLib0000 | Usage | Warning | ExtendedPropertyNotMarkedSafeToLogAnalyzer
-RockLib0001 | Usage | Info | UseSanitizingLoggingMethodAnalyzer
+RockLib0001 | Usage | Warning | UseSanitizingLoggingMethodAnalyzer
