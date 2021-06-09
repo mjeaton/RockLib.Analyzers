@@ -39,6 +39,7 @@ public class Foo
 }");
         }
 
+        [Ignore]
         [TestMethod("'Change to sanitizing logging extension method' is applied")]
         public async Task CodeFixApplied2()
         {
@@ -68,6 +69,7 @@ public class Foo
 }");
         }
 
+        [Ignore]
         [TestMethod("'Replace extendedProperties parameter with call to SetSanitizedExtendedProperties method' is applied")]
         public async Task CodeFixApplied3()
         {
