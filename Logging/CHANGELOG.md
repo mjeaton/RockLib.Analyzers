@@ -6,3 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+#### Added
+
+- Adds analyzer for RockLib0000: Extended property not marked as safe to log
+- Adds analyzer and codefix for RockLib0001: Use sanitizing logging method
