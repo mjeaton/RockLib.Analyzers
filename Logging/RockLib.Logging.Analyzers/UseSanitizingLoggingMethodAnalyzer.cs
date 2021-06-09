@@ -67,17 +67,12 @@ namespace RockLib.Logging.Analyzers
                 var invocationOperation = (IInvocationOperation)context.Operation;
                 var methodSymbol = invocationOperation.TargetMethod;
 
-                if (methodSymbol.MethodKind != MethodKind.Ordinary)
-                    return;
-
-                if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType))
+                if (methodSymbol.MethodKind == MethodKind.Ordinary
+                    && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
+                    || (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _logEntryType)
+                        && methodSymbol.Name == "SetExtendedProperties"))
                 {
-                    AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic);
-                }
-                else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _logEntryType)
-                    && methodSymbol.Name == "SetExtendedProperties")
-                {
-                    AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic, invocationOperation.Syntax.GetLocation());
+                    AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic, invocationOperation.Syntax);
                 }
             }
 
@@ -105,11 +100,11 @@ namespace RockLib.Logging.Analyzers
                 var objectCreationOperation = (IObjectCreationOperation)context.Operation;
                 if (SymbolEqualityComparer.Default.Equals(objectCreationOperation.Type, _logEntryType))
                 {
-                    AnalyzeExtendedPropertiesArgument(objectCreationOperation.Arguments, context.ReportDiagnostic);
+                    AnalyzeExtendedPropertiesArgument(objectCreationOperation.Arguments, context.ReportDiagnostic, objectCreationOperation.Syntax);
                 }
             }
 
-            private void AnalyzeExtendedPropertiesArgument(IEnumerable<IArgumentOperation> arguments, Action<Diagnostic> reportDiagnostic, Location location = null)
+            private void AnalyzeExtendedPropertiesArgument(IEnumerable<IArgumentOperation> arguments, Action<Diagnostic> reportDiagnostic, SyntaxNode reportingNode)
             {
                 var extendedPropertiesArgument = arguments.FirstOrDefault(argument => argument.Parameter.Name == "extendedProperties");
 
@@ -125,7 +120,7 @@ namespace RockLib.Logging.Analyzers
                     || (extendedPropertiesArgumentValue.TryGetDictionaryExtendedPropertyValueOperations(out var dictionaryExtendedPropertyValues)
                         && dictionaryExtendedPropertyValues.Any(value => !value.Type.IsValueType())))
                 {
-                    var diagnostic = Diagnostic.Create(Rule, location ?? extendedPropertiesArgument.Syntax.GetLocation());
+                    var diagnostic = Diagnostic.Create(Rule, reportingNode.GetLocation());
                     reportDiagnostic(diagnostic);
                 }
             }

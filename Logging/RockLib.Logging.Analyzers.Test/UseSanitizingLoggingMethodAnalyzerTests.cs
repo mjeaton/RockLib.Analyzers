@@ -62,91 +62,88 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AnalyzerTests
+public class Foo
 {{
-    public class Foo
+    public string Bar {{ get; set; }}
+
+    public void Baz(ILogger logger, {0} foo)
     {{
-        public string Bar {{ get; set; }}
+        // Set extended property value with indexer
+        var logEntry = new LogEntry();
+        {1}logEntry.ExtendedProperties[""bar""] = foo{2};
 
-        public void Baz(ILogger logger, {0} foo)
+        // Set extended properties with in-line anonymous object in LogEntry constructor
+        var logEntry1 = {1}new LogEntry(""Hello, world!"", extendedProperties: new {{ foo }}){2};
+
+        // Set extended properties with anonymous object variable in LogEntry constructor
+        var properties2 = new {{ foo }};
+        var logEntry2 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties2){2};
+
+        // Set extended properties with dictionary initialized with Add method in LogEntry constructor
+        var properties3 = new Dictionary<string, object>
         {{
-            // Set extended property value with indexer
-            var logEntry = new LogEntry();
-            {1}logEntry.ExtendedProperties[""bar""] = foo{2};
+            {{ ""foo"", foo }}
+        }};
+        properties3.Add(""bar"", foo);
+        var logEntry3 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties3){2};
 
-            // Set extended properties with in-line anonymous object in LogEntry constructor
-            var logEntry1 = new LogEntry(""Hello, world!"", {1}extendedProperties: new {{ foo }}{2});
+        // Set extended properties with dictionary initialized with indexer in LogEntry constructor
+        var properties4 = new Dictionary<string, object>
+        {{
+            [""foo""] = foo
+        }};
+        properties4[""bar""] = foo;
+        var logEntry4 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties4){2};
 
-            // Set extended properties with anonymous object variable in LogEntry constructor
-            var properties2 = new {{ foo }};
-            var logEntry2 = new LogEntry(""Hello, world!"", {1}extendedProperties: properties2{2});
+        // Set extended properties in-line anonymous object in logging extension method
+        {1}logger.Audit(""Hello, world!"", new {{ foo }}){2};
 
-            // Set extended properties with dictionary initialized with Add method in LogEntry constructor
-            var properties3 = new Dictionary<string, object>
-            {{
-                {{ ""foo"", foo }}
-            }};
-            properties3.Add(""bar"", foo);
-            var logEntry3 = new LogEntry(""Hello, world!"", {1}extendedProperties: properties3{2});
+        // Set extended properties with anonymous object variable in logging extension method
+        var properties5 = new {{ foo }};
+        {1}logger.Fatal(""Hello, world!"", properties5){2};
 
-            // Set extended properties with dictionary initialized with indexer in LogEntry constructor
-            var properties4 = new Dictionary<string, object>
-            {{
-                [""foo""] = foo
-            }};
-            properties4[""bar""] = foo;
-            var logEntry4 = new LogEntry(""Hello, world!"", {1}extendedProperties: properties4{2});
+        // Set extended properties with dictionary initialized with Add method in logging extension method
+        var properties6 = new Dictionary<string, object>
+        {{
+            {{ ""foo"", foo }}
+        }};
+        properties6.Add(""bar"", foo);
+        {1}logger.Error(""Hello, world!"", properties6){2};
 
-            // Set extended properties in-line anonymous object in logging extension method
-            logger.Audit(""Hello, world!"", {1}extendedProperties: new {{ foo }}{2});
+        // Set extended properties with dictionary initialized with indexer in logging extension method
+        var properties7 = new Dictionary<string, object>
+        {{
+            [""foo""] = foo
+        }};
+        properties7[""bar""] = foo;
+        {1}logger.Warn(""Hello, world!"", properties7){2};
 
-            // Set extended properties with anonymous object variable in logging extension method
-            var properties5 = new {{ foo }};
-            logger.Fatal(""Hello, world!"", {1}extendedProperties: properties5{2});
+        // Set extended properties with in-line anonymous object in SetExtendedProperties method
+        var logEntry8 = new LogEntry();
+        {1}logEntry8.SetExtendedProperties(new {{ foo }}){2};
 
-            // Set extended properties with dictionary initialized with Add method in logging extension method
-            var properties6 = new Dictionary<string, object>
-            {{
-                {{ ""foo"", foo }}
-            }};
-            properties6.Add(""bar"", foo);
-            logger.Error(""Hello, world!"", {1}extendedProperties: properties6{2});
+        // Set extended properties with anonymous object variable in SetExtendedProperties method
+        var logEntry9 = new LogEntry();
+        var properties9 = new {{ foo }};
+        {1}logEntry9.SetExtendedProperties(properties9){2};
 
-            // Set extended properties with dictionary initialized with indexer in logging extension method
-            var properties7 = new Dictionary<string, object>
-            {{
-                [""foo""] = foo
-            }};
-            properties7[""bar""] = foo;
-            logger.Warn(""Hello, world!"", {1}extendedProperties: properties7{2});
+        // Set extended properties with dictionary initialized with Add method in SetExtendedProperties method
+        var logEntry10 = new LogEntry();
+        var properties10 = new Dictionary<string, object>
+        {{
+            {{ ""foo"", foo }}
+        }};
+        properties10.Add(""bar"", foo);
+        {1}logEntry10.SetExtendedProperties(properties10){2};
 
-            // Set extended properties with in-line anonymous object in SetExtendedProperties method
-            var logEntry8 = new LogEntry();
-            {1}logEntry8.SetExtendedProperties(new {{ foo }}){2};
-
-            // Set extended properties with anonymous object variable in SetExtendedProperties method
-            var logEntry9 = new LogEntry();
-            var properties9 = new {{ foo }};
-            {1}logEntry9.SetExtendedProperties(properties9){2};
-
-            // Set extended properties with dictionary initialized with Add method in SetExtendedProperties method
-            var logEntry10 = new LogEntry();
-            var properties10 = new Dictionary<string, object>
-            {{
-                {{ ""foo"", foo }}
-            }};
-            properties10.Add(""bar"", foo);
-            {1}logEntry10.SetExtendedProperties(properties10){2};
-
-            // Set extended properties with dictionary initialized with indexer in SetExtendedProperties method
-            var logEntry11 = new LogEntry();
-            var properties11 = new Dictionary<string, object>
-            {{
-                [""foo""] = foo
-            }};
-            properties11[""bar""] = foo;
-            {1}logEntry11.SetExtendedProperties(properties11){2};
-        }}
+        // Set extended properties with dictionary initialized with indexer in SetExtendedProperties method
+        var logEntry11 = new LogEntry();
+        var properties11 = new Dictionary<string, object>
+        {{
+            [""foo""] = foo
+        }};
+        properties11[""bar""] = foo;
+        {1}logEntry11.SetExtendedProperties(properties11){2};
     }}
 }}", extendedPropertyType, openDiagnostic, closeDiagnostic);
         }
