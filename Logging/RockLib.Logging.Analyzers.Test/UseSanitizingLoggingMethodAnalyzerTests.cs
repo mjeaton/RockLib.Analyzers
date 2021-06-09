@@ -68,9 +68,16 @@ public class Foo
 
     public void Baz(ILogger logger, {0} foo)
     {{
-        // Set extended property value with indexer
         var logEntry = new LogEntry();
+
+        // Set extended property value with indexer
         {1}logEntry.ExtendedProperties[""bar""] = foo{2};
+
+        // Set extended property value with Add method
+        {1}logEntry.ExtendedProperties.Add(""baz"", foo){2};
+
+        // Set extended property value with TryAdd method
+        {1}logEntry.ExtendedProperties.TryAdd(""qux"", foo){2};
 
         // Set extended properties with in-line anonymous object in LogEntry constructor
         var logEntry1 = {1}new LogEntry(""Hello, world!"", extendedProperties: new {{ foo }}){2};

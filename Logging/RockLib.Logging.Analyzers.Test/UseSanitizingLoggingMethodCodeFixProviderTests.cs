@@ -104,7 +104,7 @@ public class Foo
 }");
         }
 
-        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied")]
+        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to indexer")]
         public async Task CodeFixApplied4()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -118,6 +118,66 @@ public class Foo
     {
         var logEntry = new LogEntry();
         [|logEntry.ExtendedProperties[""bar""] = this|];
+    }
+}", @"
+using RockLib.Logging;
+
+public class Foo
+{
+    public string Bar { get; set; }
+
+    public void Baz()
+    {
+        var logEntry = new LogEntry();
+        logEntry.SetSanitizedExtendedProperty(""bar"", this);
+    }
+}");
+        }
+
+        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to Add method")]
+        public async Task CodeFixApplied5()
+        {
+            await RockLibVerifier.VerifyCodeFixAsync(@"
+using RockLib.Logging;
+
+public class Foo
+{
+    public string Bar { get; set; }
+
+    public void Baz()
+    {
+        var logEntry = new LogEntry();
+        [|logEntry.ExtendedProperties.Add(""bar"", this)|];
+    }
+}", @"
+using RockLib.Logging;
+
+public class Foo
+{
+    public string Bar { get; set; }
+
+    public void Baz()
+    {
+        var logEntry = new LogEntry();
+        logEntry.SetSanitizedExtendedProperty(""bar"", this);
+    }
+}");
+        }
+
+        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to TryAdd method")]
+        public async Task CodeFixApplied6()
+        {
+            await RockLibVerifier.VerifyCodeFixAsync(@"
+using RockLib.Logging;
+
+public class Foo
+{
+    public string Bar { get; set; }
+
+    public void Baz()
+    {
+        var logEntry = new LogEntry();
+        [|logEntry.ExtendedProperties.TryAdd(""bar"", this)|];
     }
 }", @"
 using RockLib.Logging;

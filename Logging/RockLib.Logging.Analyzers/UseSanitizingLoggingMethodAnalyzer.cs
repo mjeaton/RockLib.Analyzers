@@ -74,6 +74,16 @@ namespace RockLib.Logging.Analyzers
                 {
                     AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic, invocationOperation.Syntax);
                 }
+                else if ((methodSymbol.Name == "Add" || methodSymbol.Name == "TryAdd")
+                    && invocationOperation.Instance is IPropertyReferenceOperation property
+                    && property.Member.Name == "ExtendedProperties"
+                    && SymbolEqualityComparer.Default.Equals(property.Instance.Type, _logEntryType)
+                    && invocationOperation.Arguments[1].Value is IConversionOperation conversion
+                    && !conversion.Operand.Type.IsValueType())
+                {
+                    var diagnostic = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation());
+                    context.ReportDiagnostic(diagnostic);
+                }
             }
 
             public void AnalyzeAssignment(OperationAnalysisContext context)
