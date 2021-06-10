@@ -141,6 +141,16 @@ public class TestClass
         // Call logging extension method when extendedProperties is dictionary variable populated with indexer
         {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
         {1}logger.Debug(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
 
         // Call logging extension method when extendedProperties is dictionary variable populated with Add method
         {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
