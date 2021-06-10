@@ -50,11 +50,20 @@ namespace RockLib.Logging.Analyzers
         public static bool TryGetDictionaryExtendedPropertyValueOperations(this IOperation extendedPropertiesArgumentValue,
             out IEnumerable<IOperation> operations)
         {
-            if (IsStringDictionaryVariable(extendedPropertiesArgumentValue))
+            if (extendedPropertiesArgumentValue.Type.IsStringDictionaryType())
             {
-                operations = GetDictionaryExtendedPropertyValueOperations(extendedPropertiesArgumentValue);
-                return true;
+                if (extendedPropertiesArgumentValue is ILocalReferenceOperation localReference)
+                {
+                    operations = GetDictionaryExtendedPropertyValueOperations(extendedPropertiesArgumentValue, localReference.Local);
+                    return true;
+                }
+                else if (extendedPropertiesArgumentValue is IParameterReferenceOperation parameterReference)
+                {
+                    operations = GetDictionaryExtendedPropertyValueOperations(extendedPropertiesArgumentValue, parameterReference.Parameter);
+                    return true;
+                }
             }
+
             operations = Enumerable.Empty<IOperation>();
             return false;
         }
@@ -104,18 +113,19 @@ namespace RockLib.Logging.Analyzers
             return false;
         }
 
-        private static bool IsStringDictionaryVariable(IOperation extendedPropertiesArgumentValue) =>
-            extendedPropertiesArgumentValue is ILocalReferenceOperation
-            && extendedPropertiesArgumentValue.Type.Interfaces.Any(i =>
-                   i.Name == "IDictionary"
-                       && i.IsGenericType
-                       && i.TypeArguments.Length == 2
-                       && i.TypeArguments[0].SpecialType == SpecialType.System_String);
+        public static bool IsStringDictionaryType(this ITypeSymbol typeSymbol) =>
+            (typeSymbol is INamedTypeSymbol namedType && IsStringDictionary(namedType))
+            || typeSymbol.Interfaces.Any(IsStringDictionary);
 
-        private static IEnumerable<IOperation> GetDictionaryExtendedPropertyValueOperations(IOperation extendedPropertiesArgumentValue)
+        private static bool IsStringDictionary(INamedTypeSymbol type) =>
+            type.Name == "IDictionary"
+                && type.IsGenericType
+                && type.TypeArguments.Length == 2
+                && type.TypeArguments[0].SpecialType == SpecialType.System_String;
+
+        private static IEnumerable<IOperation> GetDictionaryExtendedPropertyValueOperations(
+            IOperation extendedPropertiesArgumentValue, ISymbol extendedPropertiesSymbol)
         {
-            var extendedPropertiesSymbol = ((ILocalReferenceOperation)extendedPropertiesArgumentValue).Local;
-
             IOperation rootOperation = extendedPropertiesArgumentValue;
             while (rootOperation.Parent != null)
                 rootOperation = rootOperation.Parent;
@@ -150,13 +160,29 @@ namespace RockLib.Logging.Analyzers
 
             IOperation TryGetDictionaryAddMethodValue(SyntaxNode node)
             {
-                if (semanticModel.GetOperation(node) is IInvocationOperation operation
-                    && operation.TargetMethod.Name == "Add"
-                    && operation.TargetMethod.Parameters.Length == 2
-                    && operation.Instance is ILocalReferenceOperation localReference
-                    && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol))
+                if (semanticModel.GetOperation(node) is IInvocationOperation operation)
                 {
-                    return operation.Arguments[1].Value;
+                    if (!operation.TargetMethod.IsStatic
+                        &&(operation.TargetMethod.Name == "Add" || operation.TargetMethod.Name == "TryAdd")
+                        && operation.TargetMethod.Parameters.Length == 2
+                        && ((operation.Instance is ILocalReferenceOperation localReference
+                            && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol))
+                            || (operation.Instance is IParameterReferenceOperation parameterReference
+                                && SymbolEqualityComparer.Default.Equals(parameterReference.Parameter, extendedPropertiesSymbol))))
+                    {
+                        return operation.Arguments[1].Value;
+                    }
+
+                    if (operation.TargetMethod.IsStatic
+                        && operation.TargetMethod.Name == "TryAdd"
+                        && operation.TargetMethod.Parameters.Length == 3
+                        && ((operation.Arguments[0].Value is ILocalReferenceOperation localReference1
+                            && SymbolEqualityComparer.Default.Equals(localReference1.Local, extendedPropertiesSymbol))
+                            || (operation.Arguments[0].Value is IParameterReferenceOperation parameterReference1
+                                && SymbolEqualityComparer.Default.Equals(parameterReference1.Parameter, extendedPropertiesSymbol))))
+                    {
+                        return operation.Arguments[2].Value;
+                    }
                 }
                 return null;
             }
@@ -166,8 +192,10 @@ namespace RockLib.Logging.Analyzers
                 if (((ExpressionStatementSyntax)node).Expression is AssignmentExpressionSyntax assignmentExpression
                     && semanticModel.GetOperation(assignmentExpression) is ISimpleAssignmentOperation assignmentOperation
                     && assignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation
-                    && propertyReferenceOperation.Instance is ILocalReferenceOperation localReference
-                    && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol)
+                    && ((propertyReferenceOperation.Instance is ILocalReferenceOperation localReference
+                        && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol))
+                        || ((propertyReferenceOperation.Instance is IParameterReferenceOperation parameterReference
+                            && SymbolEqualityComparer.Default.Equals(parameterReference.Parameter, extendedPropertiesSymbol))))
                     && propertyReferenceOperation.Arguments.Length == 1
                     && propertyReferenceOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String)
                 {

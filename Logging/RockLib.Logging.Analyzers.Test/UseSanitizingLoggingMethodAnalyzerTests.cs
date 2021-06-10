@@ -13,7 +13,7 @@ namespace RockLib.Logging.Analyzers.Test
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
                 GetTestCode(
-                    extendedPropertyType: "Foo",
+                    extendedPropertyType: "TestClass",
                     shouldReportDiagnostic: true));
         }
 
@@ -39,7 +39,7 @@ namespace RockLib.Logging.Analyzers.Test
         [DataRow("DateTimeOffset", DisplayName = "No diagnostics are reported for extended properties of type DateTimeOffset")]
         [DataRow("Guid", DisplayName = "No diagnostics are reported for extended properties of type Guid")]
         [DataRow("Uri", DisplayName = "No diagnostics are reported for extended properties of type Uri")]
-        [DataRow("Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
+        [DataRow("System.Text.Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
         [DataRow("Type", DisplayName = "No diagnostics are reported for extended properties of type Type")]
         [DataRow("TypeCode", DisplayName = "No diagnostics are reported for extended properties of an enum type")]
         public async Task NoDiagnosticsReported(string extendedPropertyType)
@@ -60,97 +60,288 @@ namespace RockLib.Logging.Analyzers.Test
 using RockLib.Logging;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
-public class Foo
+public class TestClass
 {{
-    public string Bar {{ get; set; }}
-
-    public void Baz(ILogger logger, {0} foo)
+    public void Set_LogEntry_ExtendedProperty_Value(
+        {0} exampleValue,
+        LogEntry logEntry)
     {{
-        var logEntry = new LogEntry();
+        // Set LogEntry.ExtendedProperty value with indexer
+        {1}logEntry.ExtendedProperties[""example""] = exampleValue{2};
 
-        // Set extended property value with indexer
-        {1}logEntry.ExtendedProperties[""bar""] = foo{2};
+        // Set LogEntry.ExtendedProperty value with Add method
+        {1}logEntry.ExtendedProperties.Add(""example"", exampleValue){2};
 
-        // Set extended property value with Add method
-        {1}logEntry.ExtendedProperties.Add(""baz"", foo){2};
+        // Set LogEntry.ExtendedProperty value with TryAdd method
+        {1}logEntry.ExtendedProperties.TryAdd(""example"", exampleValue){2};
+    }}
 
-        // Set extended property value with TryAdd method
-        {1}logEntry.ExtendedProperties.TryAdd(""qux"", foo){2};
+    public void Call_Logging_ExtensionMethod_With_ExtendedProperties_Parameter(
+        {0} exampleValue,
+        ILogger logger,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithTryAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithIndexer)
+    {{
+        propertiesDictionaryParameterPopulatedWithAddMethod.Add(""example"", exampleValue);
 
-        // Set extended properties with in-line anonymous object in LogEntry constructor
-        var logEntry1 = {1}new LogEntry(""Hello, world!"", extendedProperties: new {{ foo }}){2};
+        propertiesDictionaryParameterPopulatedWithTryAddMethod.TryAdd(""example"", exampleValue);
 
-        // Set extended properties with anonymous object variable in LogEntry constructor
-        var properties2 = new {{ foo }};
-        var logEntry2 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties2){2};
+        propertiesDictionaryParameterPopulatedWithIndexer[""example""] = exampleValue;
 
-        // Set extended properties with dictionary initialized with Add method in LogEntry constructor
-        var properties3 = new Dictionary<string, object>
+        var propertiesDictionaryVariableInitializedWithAddMethodInitializer = new Dictionary<string, object>
         {{
-            {{ ""foo"", foo }}
+            {{ ""example"", exampleValue }}
         }};
-        properties3.Add(""bar"", foo);
-        var logEntry3 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties3){2};
 
-        // Set extended properties with dictionary initialized with indexer in LogEntry constructor
-        var properties4 = new Dictionary<string, object>
+        var propertiesDictionaryVariableInitializedWithIndexerInitializer = new Dictionary<string, object>
         {{
-            [""foo""] = foo
+            [""example""] = exampleValue
         }};
-        properties4[""bar""] = foo;
-        var logEntry4 = {1}new LogEntry(""Hello, world!"", extendedProperties: properties4){2};
 
-        // Set extended properties in-line anonymous object in logging extension method
-        {1}logger.Audit(""Hello, world!"", new {{ foo }}){2};
+        var propertiesDictionaryVariableInitializedWithAddMethod = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithAddMethod.Add(""example"", exampleValue);
 
-        // Set extended properties with anonymous object variable in logging extension method
-        var properties5 = new {{ foo }};
-        {1}logger.Fatal(""Hello, world!"", properties5){2};
+        var propertiesDictionaryVariableInitializedWithIndexer = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithIndexer[""example""] = exampleValue;
 
-        // Set extended properties with dictionary initialized with Add method in logging extension method
-        var properties6 = new Dictionary<string, object>
+        var propertiesAnonymousObject = new {{ example = exampleValue }};
+
+        var exception = new Exception();
+
+        // Call logging extension method when extendedProperties is in-line anonymous object
+        {1}logger.Debug(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Debug(""Example message"", exception, new {{ example = exampleValue }}){2};
+        {1}logger.Info(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Info(""Example message"", exception, new {{ example = exampleValue }}){2};
+        {1}logger.Warn(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Warn(""Example message"", exception, new {{ example = exampleValue }}){2};
+        {1}logger.Error(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Error(""Example message"", exception, new {{ example = exampleValue }}){2};
+        {1}logger.Fatal(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Fatal(""Example message"", exception, new {{ example = exampleValue }}){2};
+        {1}logger.Audit(""Example message"", new {{ example = exampleValue }}){2};
+        {1}logger.Audit(""Example message"", exception, new {{ example = exampleValue }}){2};
+
+        // Call logging extension method when extendedProperties is anonymous object variable
+        {1}logger.Debug(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Debug(""Example message"", exception, propertiesAnonymousObject){2};
+        {1}logger.Info(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Info(""Example message"", exception, propertiesAnonymousObject){2};
+        {1}logger.Warn(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Warn(""Example message"", exception, propertiesAnonymousObject){2};
+        {1}logger.Error(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Error(""Example message"", exception, propertiesAnonymousObject){2};
+        {1}logger.Fatal(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesAnonymousObject){2};
+        {1}logger.Audit(""Example message"", propertiesAnonymousObject){2};
+        {1}logger.Audit(""Example message"", exception, propertiesAnonymousObject){2};
+
+        // Call logging extension method when extendedProperties is dictionary variable populated with indexer
+        {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithIndexer){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexer){2};
+
+        // Call logging extension method when extendedProperties is dictionary variable populated with Add method
+        {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryVariableInitializedWithAddMethod){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethod){2};
+
+        // Call logging extension method when extendedProperties is dictionary created with indexer initializer
+        {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+
+        // Call logging extension method when extendedProperties is dictionary created with Add method initializer
+        {1}logger.Debug(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+
+        // Call logging extension method when extendedProperties is dictionary parameter populated with indexer
+        {1}logger.Debug(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryParameterPopulatedWithIndexer){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryParameterPopulatedWithIndexer){2};
+
+        // Call logging extension method when extendedProperties is dictionary parameter populated with TryAdd method
+        {1}logger.Debug(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+
+        // Call logging extension method when extendedProperties is dictionary parameter populated with Add method
+        {1}logger.Debug(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Debug(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Info(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Info(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Warn(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Warn(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Error(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Error(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Fatal(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Fatal(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Audit(""Example message"", propertiesDictionaryParameterPopulatedWithAddMethod){2};
+        {1}logger.Audit(""Example message"", exception, propertiesDictionaryParameterPopulatedWithAddMethod){2};
+    }}
+
+    public void Call_LogEntry_Constructor_With_ExtendedProperties_Parameter(
+        {0} exampleValue,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithTryAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithIndexer)
+    {{
+        propertiesDictionaryParameterPopulatedWithAddMethod.Add(""example"", exampleValue);
+
+        propertiesDictionaryParameterPopulatedWithTryAddMethod.TryAdd(""example"", exampleValue);
+
+        propertiesDictionaryParameterPopulatedWithIndexer[""example""] = exampleValue;
+
+        var propertiesDictionaryVariableInitializedWithAddMethodInitializer = new Dictionary<string, object>
         {{
-            {{ ""foo"", foo }}
+            {{ ""example"", exampleValue }}
         }};
-        properties6.Add(""bar"", foo);
-        {1}logger.Error(""Hello, world!"", properties6){2};
 
-        // Set extended properties with dictionary initialized with indexer in logging extension method
-        var properties7 = new Dictionary<string, object>
+        var propertiesDictionaryVariableInitializedWithIndexerInitializer = new Dictionary<string, object>
         {{
-            [""foo""] = foo
+            [""example""] = exampleValue
         }};
-        properties7[""bar""] = foo;
-        {1}logger.Warn(""Hello, world!"", properties7){2};
 
-        // Set extended properties with in-line anonymous object in SetExtendedProperties method
-        var logEntry8 = new LogEntry();
-        {1}logEntry8.SetExtendedProperties(new {{ foo }}){2};
+        var propertiesDictionaryVariableInitializedWithAddMethod = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithAddMethod.Add(""example"", exampleValue);
 
-        // Set extended properties with anonymous object variable in SetExtendedProperties method
-        var logEntry9 = new LogEntry();
-        var properties9 = new {{ foo }};
-        {1}logEntry9.SetExtendedProperties(properties9){2};
+        var propertiesDictionaryVariableInitializedWithIndexer = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithIndexer[""example""] = exampleValue;
 
-        // Set extended properties with dictionary initialized with Add method in SetExtendedProperties method
-        var logEntry10 = new LogEntry();
-        var properties10 = new Dictionary<string, object>
+        var propertiesAnonymousObject = new {{ example = exampleValue }};
+
+        // Call LogEntry constructor when extendedProperties is in-line anonymous object
+        {1}new LogEntry(""Example message"", extendedProperties: new {{ example = exampleValue }}){2};
+
+        // Call LogEntry constructor when extendedProperties is anonymous object variable
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesAnonymousObject){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary variable populated with indexer
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryVariableInitializedWithIndexer){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary variable populated with Add method
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryVariableInitializedWithAddMethod){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary created with indexer initializer
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary created with Add method initializer
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary parameter populated with indexer
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryParameterPopulatedWithIndexer){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary parameter populated with TryAdd method
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+
+        // Call LogEntry constructor when extendedProperties is dictionary parameter populated with Add method
+        {1}new LogEntry(""Example message"", extendedProperties: propertiesDictionaryParameterPopulatedWithAddMethod){2};
+    }}
+
+    public void Call_LogEntry_SetExtendedProperties(
+        {0} exampleValue,
+        LogEntry logEntry,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithTryAddMethod,
+        IDictionary<string, object> propertiesDictionaryParameterPopulatedWithIndexer)
+    {{
+        propertiesDictionaryParameterPopulatedWithAddMethod.Add(""example"", exampleValue);
+
+        propertiesDictionaryParameterPopulatedWithTryAddMethod.TryAdd(""example"", exampleValue);
+
+        propertiesDictionaryParameterPopulatedWithIndexer[""example""] = exampleValue;
+
+        var propertiesDictionaryVariableInitializedWithAddMethodInitializer = new Dictionary<string, object>
         {{
-            {{ ""foo"", foo }}
+            {{ ""example"", exampleValue }}
         }};
-        properties10.Add(""bar"", foo);
-        {1}logEntry10.SetExtendedProperties(properties10){2};
 
-        // Set extended properties with dictionary initialized with indexer in SetExtendedProperties method
-        var logEntry11 = new LogEntry();
-        var properties11 = new Dictionary<string, object>
+        var propertiesDictionaryVariableInitializedWithIndexerInitializer = new Dictionary<string, object>
         {{
-            [""foo""] = foo
+            [""example""] = exampleValue
         }};
-        properties11[""bar""] = foo;
-        {1}logEntry11.SetExtendedProperties(properties11){2};
+
+        var propertiesDictionaryVariableInitializedWithAddMethod = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithAddMethod.Add(""example"", exampleValue);
+
+        var propertiesDictionaryVariableInitializedWithIndexer = new Dictionary<string, object>();
+        propertiesDictionaryVariableInitializedWithIndexer[""example""] = exampleValue;
+
+        var propertiesAnonymousObject = new {{ example = exampleValue }};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is in-line anonymous object
+        {1}logEntry.SetExtendedProperties(new {{ example = exampleValue }}){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is anonymous object variable
+        {1}logEntry.SetExtendedProperties(propertiesAnonymousObject){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary variable populated with indexer
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryVariableInitializedWithIndexer){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary variable populated with Add method
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryVariableInitializedWithAddMethod){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary created with indexer initializer
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryVariableInitializedWithIndexerInitializer){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary created with Add method initializer
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryVariableInitializedWithAddMethodInitializer){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary parameter populated with indexer
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryParameterPopulatedWithIndexer){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary parameter populated with TryAdd method
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryParameterPopulatedWithTryAddMethod){2};
+
+        // Call logEntry.SetExtendedProperties when extendedProperties is dictionary parameter populated with Add method
+        {1}logEntry.SetExtendedProperties(propertiesDictionaryParameterPopulatedWithAddMethod){2};
     }}
 }}", extendedPropertyType, openDiagnostic, closeDiagnostic);
         }
