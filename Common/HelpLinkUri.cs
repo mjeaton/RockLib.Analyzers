@@ -1,4 +1,4 @@
-﻿namespace RockLib.Logging.Analyzers
+﻿namespace RockLib.Analyzers.Common
 {
     internal static class HelpLinkUri
     {

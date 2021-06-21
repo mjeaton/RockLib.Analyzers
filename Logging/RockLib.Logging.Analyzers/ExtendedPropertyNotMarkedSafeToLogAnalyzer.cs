@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using RockLib.Analyzers.Common;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
