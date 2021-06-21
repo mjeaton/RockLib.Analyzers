@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
+using RockLib.Analyzers.Common;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -126,9 +127,7 @@ namespace RockLib.Logging.Analyzers
         private static IEnumerable<IOperation> GetDictionaryExtendedPropertyValueOperations(
             IOperation extendedPropertiesArgumentValue, ISymbol extendedPropertiesSymbol)
         {
-            IOperation rootOperation = extendedPropertiesArgumentValue;
-            while (rootOperation.Parent != null)
-                rootOperation = rootOperation.Parent;
+            var rootOperation = extendedPropertiesArgumentValue.GetRootOperation();
 
             var semanticModel = rootOperation.SemanticModel;
             var descendants = rootOperation.Syntax.DescendantNodes(rootOperation.Syntax.GetLocation().SourceSpan);

@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)DiagnosticCategory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DiagnosticIds.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CommonExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HelpLinkUri.cs" />
   </ItemGroup>
 </Project>

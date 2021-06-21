@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,6 +30,10 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
             var test = new Test
             {
                 TestCode = source,
+                ReferenceAssemblies = ReferenceAssemblies.Default
+                    .AddPackages(ImmutableArray.Create(
+                        new PackageIdentity("RockLib.Logging.Microsoft.Extensions", "1.0.2"),
+                        new PackageIdentity("Microsoft.Extensions.Hosting", "5.0.0")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
