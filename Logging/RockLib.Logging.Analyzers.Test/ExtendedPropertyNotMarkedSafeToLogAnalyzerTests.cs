@@ -74,7 +74,7 @@ namespace RockLib.Logging.Analyzers.Test
         [DataRow("DateTimeOffset", DisplayName = "No diagnostics are reported for extended properties of type DateTimeOffset")]
         [DataRow("Guid", DisplayName = "No diagnostics are reported for extended properties of type Guid")]
         [DataRow("Uri", DisplayName = "No diagnostics are reported for extended properties of type Uri")]
-        [DataRow("Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
+        [DataRow("System.Text.Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
         [DataRow("Type", DisplayName = "No diagnostics are reported for extended properties of type Type")]
         [DataRow("TypeCode", DisplayName = "No diagnostics are reported for extended properties of an enum type")]
         public async Task NoDiagnosticsReported3(string extendedPropertyType)
