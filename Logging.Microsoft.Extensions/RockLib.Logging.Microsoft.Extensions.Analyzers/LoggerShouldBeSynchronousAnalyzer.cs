@@ -113,7 +113,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 public SyntaxWalker(IInvocationOperation addLoggerOperation,
                     INamedTypeSymbol addRockLibLoggerProviderExtensionsType, CancellationToken cancellationToken)
                 {
-                    _loggerName = GetLoggerName(addLoggerOperation.Arguments);
+                    _loggerName = addLoggerOperation.Arguments.GetLoggerName();
                     _addRockLibLoggerProviderExtensionsType = addRockLibLoggerProviderExtensionsType;
                     _cancellationToken = cancellationToken;
                 }
@@ -135,27 +135,12 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                         && _compilation.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
                         && semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation
                         && SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _addRockLibLoggerProviderExtensionsType)
-                        && GetLoggerName(invocation.Arguments) == _loggerName)
+                        && invocation.Arguments.GetLoggerName() == _loggerName)
                     {
                         HasAddRockLibLoggerProviderInvocation = true;
                     }
 
                     base.VisitInvocationExpression(node);
-                }
-
-                private static string GetLoggerName(ImmutableArray<IArgumentOperation> arguments)
-                {
-                    if (arguments.FirstOrDefault(IsLoggerNameArgument) is IArgumentOperation argument
-                        && argument.Value is ILiteralOperation literal
-                        && literal.ConstantValue.HasValue)
-                    {
-                        return (string)literal.ConstantValue.Value;
-                    }
-
-                    return "";
-
-                    bool IsLoggerNameArgument(IArgumentOperation arg) =>
-                        arg.Parameter.Name == "loggerName" || arg.Parameter.Name == "rockLibLoggerName";
                 }
             }
         }
