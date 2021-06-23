@@ -48,7 +48,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 return;
 
             var analyzer = new OperationAnalyzer(addLoggerExtensionsType, addRockLibLoggerProviderExtensionsType);
-        
+
             context.RegisterOperationAction(analyzer.AnalyzeInvocation, OperationKind.Invocation);
         }
 
@@ -108,7 +108,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 private readonly string _loggerName;
                 private readonly INamedTypeSymbol _addRockLibLoggerProviderExtensionsType;
                 private readonly CancellationToken _cancellationToken;
-                private readonly SemanticModel _semanticModel;
+                private Compilation _compilation;
 
                 public SyntaxWalker(IInvocationOperation addLoggerOperation,
                     INamedTypeSymbol addRockLibLoggerProviderExtensionsType, CancellationToken cancellationToken)
@@ -116,13 +116,13 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                     _loggerName = GetLoggerName(addLoggerOperation.Arguments);
                     _addRockLibLoggerProviderExtensionsType = addRockLibLoggerProviderExtensionsType;
                     _cancellationToken = cancellationToken;
-                    _semanticModel = addLoggerOperation.GetRootOperation().SemanticModel;
                 }
 
                 public bool HasAddRockLibLoggerProviderInvocation { get; private set; }
 
                 public void Visit(Compilation compilation)
                 {
+                    _compilation = compilation;
                     foreach (var syntaxTree in compilation.SyntaxTrees)
                         Visit(syntaxTree.GetRoot(_cancellationToken));
                 }
@@ -132,7 +132,8 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                     if (node.Expression is MemberAccessExpressionSyntax memberAccess
                         && memberAccess.Name is IdentifierNameSyntax identifier
                         && identifier.Identifier.Text == "AddRockLibLoggerProvider"
-                        && _semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation
+                        && _compilation.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
+                        && semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation
                         && SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _addRockLibLoggerProviderExtensionsType)
                         && GetLoggerName(invocation.Arguments) == _loggerName)
                     {
