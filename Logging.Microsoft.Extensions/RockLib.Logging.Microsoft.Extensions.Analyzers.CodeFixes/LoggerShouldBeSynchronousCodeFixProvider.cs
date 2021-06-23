@@ -42,7 +42,10 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 if (node is InvocationExpressionSyntax invocationExpression
                     && semanticModel.GetOperation(node, context.CancellationToken) is IInvocationOperation invocationOperation)
                 {
-                    var processingModeArgumentOperation = invocationOperation.Arguments.First(a => a.Parameter.Name == "processingMode");
+                    var processingModeArgumentOperation = invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "processingMode");
+
+                    if (processingModeArgumentOperation == null)
+                        continue;
 
                     if (processingModeArgumentOperation.IsImplicit)
                     {
