@@ -15,7 +15,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
     {
         private static readonly LocalizableString _title = "RockLibLoggerProvider has missing logger";
         private static readonly LocalizableString _messageFormat = "A logger with the {0} has not been registered with the service collection";
-        private static readonly LocalizableString _description = ""; // TODO: Write description
+        private static readonly LocalizableString _description = "RockLibLoggerProvider has a dependency on a named instance of RockLib.Logging.ILogger. If such a logger is not registered with the service collection, the RockLibLoggerProvider will fail to initialize.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticIds.RockLibLoggerProviderHasMissingLogger,
