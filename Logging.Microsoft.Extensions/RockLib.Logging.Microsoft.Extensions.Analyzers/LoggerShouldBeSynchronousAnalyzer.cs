@@ -12,14 +12,14 @@ using System.Threading;
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class UseSynchronousLoggerWithRockLibLoggerProviderAnalyzer : DiagnosticAnalyzer
+    public class LoggerShouldBeSynchronousAnalyzer : DiagnosticAnalyzer
     {
-        private static readonly LocalizableString _title = "Loggers used by RockLibLoggerProvider should be synchronous";
+        private static readonly LocalizableString _title = "Logger should be synchronous";
         private static readonly LocalizableString _messageFormat = "Loggers used by RockLibLoggerProvider should be synchronous";
         private static readonly LocalizableString _description = "When using RockLibLoggerProvider, the RockLib logger should be have a synchronous processing mode. This is because context available to the logger is expected by the runtime to be consumed on the same thread.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-            DiagnosticIds.UseSynchronousLoggerWithRockLibLoggerProvider,
+            DiagnosticIds.LoggerShouldBeSynchronous,
             _title,
             _messageFormat,
             DiagnosticCategory.Usage,

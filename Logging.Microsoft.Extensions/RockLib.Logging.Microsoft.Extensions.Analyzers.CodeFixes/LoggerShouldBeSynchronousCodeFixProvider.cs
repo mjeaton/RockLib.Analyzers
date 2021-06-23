@@ -13,13 +13,13 @@ using System.Threading.Tasks;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 {
-    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UseSynchronousLoggerWithRockLibLoggerProviderCodeFixProvider)), Shared]
-    public class UseSynchronousLoggerWithRockLibLoggerProviderCodeFixProvider : CodeFixProvider
+    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(LoggerShouldBeSynchronousCodeFixProvider)), Shared]
+    public class LoggerShouldBeSynchronousCodeFixProvider : CodeFixProvider
     {
         public const string AddSynchronousProcessingModeArgumentTitle = "Add 'processingMode' argument with a value of Logger.ProcessingMode.Synchronous";
         public const string ChangeProcessingModeArgumentToSynchronousTitle = "Change 'processingMode' argument to Logger.ProcessingMode.Synchronous";
 
-        public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UseSynchronousLoggerWithRockLibLoggerProvider);
+        public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.LoggerShouldBeSynchronous);
 
         public sealed override FixAllProvider GetFixAllProvider()
         {

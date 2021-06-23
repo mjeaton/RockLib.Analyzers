@@ -1,16 +1,16 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using RockLibVerifier = RockLib.Logging.Microsoft.Extensions.Analyzers.Test.CSharpCodeFixVerifier<
-    RockLib.Logging.Microsoft.Extensions.Analyzers.UseSynchronousLoggerWithRockLibLoggerProviderAnalyzer,
-    RockLib.Logging.Microsoft.Extensions.Analyzers.UseSynchronousLoggerWithRockLibLoggerProviderCodeFixProvider>;
+    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousAnalyzer,
+    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousCodeFixProvider>;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
 {
     [TestClass]
-    public class UseSynchronousLoggerWithRockLibLoggerProviderCodeFixProviderTest
+    public class LoggerShouldBeSynchronousCodeFixProviderTests
     {
-        [TestMethod]
-        public async Task Foo()
+        [TestMethod(null)]
+        public async Task CodeFixApplied1()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
 using Microsoft.Extensions.DependencyInjection;
@@ -43,8 +43,8 @@ public class Startup
 }");
         }
 
-        [TestMethod]
-        public async Task Bar()
+        [TestMethod(null)]
+        public async Task CodeFixApplied2()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
 using Microsoft.Extensions.DependencyInjection;

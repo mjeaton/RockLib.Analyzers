@@ -3,4 +3,4 @@
 ### New Rules
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-RockLib0002 | Usage | Warning | UseSynchronousLoggerWithRockLibLoggerProviderAnalyzer
+RockLib0002 | Usage | Warning | LoggerShouldBeSynchronousAnalyzer

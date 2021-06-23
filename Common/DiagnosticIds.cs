@@ -4,6 +4,6 @@
     {
         public const string ExtendedPropertyNotMarkedSafeToLog = "RockLib0000";
         public const string UseSanitizingLoggingMethod = "RockLib0001";
-        public const string UseSynchronousLoggerWithRockLibLoggerProvider = "RockLib0002";
+        public const string LoggerShouldBeSynchronous = "RockLib0002";
     }
 }

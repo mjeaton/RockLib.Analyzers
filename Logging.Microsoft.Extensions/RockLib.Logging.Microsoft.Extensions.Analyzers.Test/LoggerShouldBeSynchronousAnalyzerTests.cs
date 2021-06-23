@@ -1,12 +1,12 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using RockLibVerifier = RockLib.Logging.Microsoft.Extensions.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Microsoft.Extensions.Analyzers.UseSynchronousLoggerWithRockLibLoggerProviderAnalyzer>;
+    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousAnalyzer>;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
 {
     [TestClass]
-    public class UseSynchronousLoggerWithRockLibLoggerProviderAnalyzerTests
+    public class LoggerShouldBeSynchronousAnalyzerTests
     {
         private const string AspNetCoreShim = @"
 
