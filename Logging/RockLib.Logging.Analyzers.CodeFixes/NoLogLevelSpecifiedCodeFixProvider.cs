@@ -23,6 +23,8 @@ namespace RockLib.Logging.Analyzers
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.NoLogLevelSpecified);
 
+        public sealed override FixAllProvider GetFixAllProvider() => null;
+
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
