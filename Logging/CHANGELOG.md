@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+#### Added
+
+- Adds analyzer and codefix for RockLib0005: No log level specified
+
 #### Fixed
 
 - Be able to analyze extended properties when defined as a parameter, not just as a local variable
