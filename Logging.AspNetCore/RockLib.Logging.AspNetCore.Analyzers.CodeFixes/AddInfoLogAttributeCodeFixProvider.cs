@@ -43,7 +43,9 @@ namespace RockLib.Logging.AspNetCore.Analyzers
             }
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         private static async Task<Document> AddInfoLogAttributeAsync(Document document, SyntaxNode root, MemberDeclarationSyntax declaration, CancellationToken cancellationToken)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var attributes = declaration.AttributeLists.Add(
                 SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList<AttributeSyntax>(

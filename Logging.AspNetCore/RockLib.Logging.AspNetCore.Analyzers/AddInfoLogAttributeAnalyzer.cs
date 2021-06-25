@@ -68,6 +68,10 @@ namespace RockLib.Logging.AspNetCore.Analyzers
                     if (HasInfoLogAttribute(namedTypeSymbol))
                         return;
 
+                    foreach (var method in namedTypeSymbol.GetMembers().OfType<IMethodSymbol>())
+                        if (method.MethodKind == MethodKind.Ordinary && HasInfoLogAttribute(method))
+                            return;
+
                     var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name);
                     context.ReportDiagnostic(diagnostic);
                 }
@@ -81,7 +85,8 @@ namespace RockLib.Logging.AspNetCore.Analyzers
 
                 if (IsControllerBase(containingType))
                 {
-                    if (HasInfoLogAttribute(containingType) || HasInfoLogAttribute(methodSymbol))
+                    if (methodSymbol.MethodKind == MethodKind.Ordinary
+                        && (HasInfoLogAttribute(containingType) || HasInfoLogAttribute(methodSymbol)))
                         return;
 
                     var diagnostic = Diagnostic.Create(Rule, methodSymbol.Locations[0], methodSymbol.Name);

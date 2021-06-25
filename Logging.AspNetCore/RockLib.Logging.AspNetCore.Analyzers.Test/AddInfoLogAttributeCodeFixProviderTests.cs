@@ -44,13 +44,32 @@ namespace UnitTestingNamespace
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
 using Microsoft.AspNetCore.Mvc;
+using RockLib.Logging.AspNetCore;
 
 namespace UnitTestingNamespace
 {
     [ApiController]
     [Route(""[controller]"")]
-    public class [|TestController|] : ControllerBase
+    public class TestController : ControllerBase
     {
+        [HttpGet]
+        [InfoLog]
+        public string Get()
+        {
+            return ""Get"";
+        }
+
+        [HttpPut]
+        public string [|Put|]()
+        {
+            return ""Put"";
+        }
+
+        [HttpPost]
+        public string [|Post|]()
+        {
+            return ""Post"";
+        }
     }
 }
 ", @"
@@ -61,9 +80,28 @@ namespace UnitTestingNamespace
 {
     [ApiController]
     [Route(""[controller]"")]
-    [InfoLog]
     public class TestController : ControllerBase
     {
+        [HttpGet]
+        [InfoLog]
+        public string Get()
+        {
+            return ""Get"";
+        }
+
+        [HttpPut]
+        [InfoLog]
+        public string Put()
+        {
+            return ""Put"";
+        }
+
+        [HttpPost]
+        [InfoLog]
+        public string Post()
+        {
+            return ""Post"";
+        }
     }
 }
 ");
