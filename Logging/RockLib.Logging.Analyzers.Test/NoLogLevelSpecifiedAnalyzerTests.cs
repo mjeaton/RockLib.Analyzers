@@ -1,14 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Xunit;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
     RockLib.Logging.Analyzers.NoLogLevelSpecifiedAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    [TestClass]
     public class NoLogLevelSpecifiedAnalyzerTests
     {
-        [TestMethod]
+        [Fact(DisplayName = null)]
         public async Task DiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
@@ -32,7 +31,7 @@ public class Test
 }");
         }
 
-        [TestMethod]
+        [Fact(DisplayName = null)]
         public async Task NoDiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"

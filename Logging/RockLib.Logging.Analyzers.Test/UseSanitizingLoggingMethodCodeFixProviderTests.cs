@@ -1,15 +1,14 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Xunit;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpCodeFixVerifier<
     RockLib.Logging.Analyzers.UseSanitizingLoggingMethodAnalyzer,
     RockLib.Logging.Analyzers.UseSanitizingLoggingMethodCodeFixProvider>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    [TestClass]
     public class UseSanitizingLoggingMethodCodeFixProviderTests
     {
-        [TestMethod("'Change to SetSanitizedExtendedProperties' is applied")]
+        [Fact(DisplayName = "'Change to SetSanitizedExtendedProperties' is applied")]
         public async Task CodeFixApplied1()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -39,8 +38,7 @@ public class Foo
 }");
         }
 
-        [Ignore]
-        [TestMethod("'Change to sanitizing logging extension method' is applied")]
+        [Fact(DisplayName = "'Change to sanitizing logging extension method' is applied")]
         public async Task CodeFixApplied2()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -69,8 +67,7 @@ public class Foo
 }");
         }
 
-        [Ignore]
-        [TestMethod("'Replace extendedProperties parameter with call to SetSanitizedExtendedProperties method' is applied")]
+        [Fact(DisplayName = "'Replace extendedProperties parameter with call to SetSanitizedExtendedProperties method' is applied")]
         public async Task CodeFixApplied3()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -106,7 +103,7 @@ public class Foo
 }");
         }
 
-        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to indexer")]
+        [Fact(DisplayName = "'Replace with call to SetSanitizedExtendedProperty' is applied to indexer")]
         public async Task CodeFixApplied4()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -136,7 +133,7 @@ public class Foo
 }");
         }
 
-        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to Add method")]
+        [Fact(DisplayName = "'Replace with call to SetSanitizedExtendedProperty' is applied to Add method")]
         public async Task CodeFixApplied5()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"
@@ -166,7 +163,7 @@ public class Foo
 }");
         }
 
-        [TestMethod("'Replace with call to SetSanitizedExtendedProperty' is applied to TryAdd method")]
+        [Fact(DisplayName = "'Replace with call to SetSanitizedExtendedProperty' is applied to TryAdd method")]
         public async Task CodeFixApplied6()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"

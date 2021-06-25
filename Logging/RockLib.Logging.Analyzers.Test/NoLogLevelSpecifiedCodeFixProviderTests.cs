@@ -1,15 +1,14 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Xunit;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpCodeFixVerifier<
     RockLib.Logging.Analyzers.NoLogLevelSpecifiedAnalyzer,
     RockLib.Logging.Analyzers.NoLogLevelSpecifiedCodeFixProvider>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    [TestClass]
     public class NoLogLevelSpecifiedCodeFixProviderTests
     {
-        [TestMethod(null)]
+        [Fact(DisplayName = null)]
         public async Task CodeFixApplied1()
         {
             await RockLibVerifier.VerifyCodeFixAsync(@"

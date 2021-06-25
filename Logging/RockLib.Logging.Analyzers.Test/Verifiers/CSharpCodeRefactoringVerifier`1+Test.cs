@@ -7,7 +7,7 @@ namespace RockLib.Logging.Analyzers.Test
     public static partial class CSharpCodeRefactoringVerifier<TCodeRefactoring>
         where TCodeRefactoring : CodeRefactoringProvider, new()
     {
-        public class Test : CSharpCodeRefactoringTest<TCodeRefactoring, MSTestVerifier>
+        public class Test : CSharpCodeRefactoringTest<TCodeRefactoring, XUnitVerifier>
         {
             public Test()
             {
