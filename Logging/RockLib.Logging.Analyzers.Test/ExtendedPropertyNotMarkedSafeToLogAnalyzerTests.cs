@@ -1,14 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Xunit;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
     RockLib.Logging.Analyzers.ExtendedPropertyNotMarkedSafeToLogAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    [TestClass]
     public class ExtendedPropertyNotMarkedSafeToLogAnalyzerTests
     {
-        [TestMethod("Diagnostrics are reported when extended property type is not marked as safe to log")]
+        [Fact(DisplayName = "Diagnostrics are reported when extended property type is not marked as safe to log")]
         public async Task DiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -19,7 +18,7 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.None));
         }
 
-        [TestMethod("Diagnostrics are reported when extended property type is decorated with [SafeToLog] but all properties are decorated with [NotSafeToLog]")]
+        [Fact(DisplayName = "Diagnostrics are reported when extended property type is decorated with [SafeToLog] but all properties are decorated with [NotSafeToLog]")]
         public async Task DiagnosticsReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -30,7 +29,7 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.SafeToLog));
         }
 
-        [TestMethod("No diagnostics are reported when extended property type has property decorated with [SafeToLog]")]
+        [Fact(DisplayName = "No diagnostics are reported when extended property type has property decorated with [SafeToLog]")]
         public async Task NoDiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -41,7 +40,7 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.None));
         }
 
-        [TestMethod("No diagnostics are reported when extended property type is decorated with [SafeToLog]")]
+        [Fact(DisplayName = "No diagnostics are reported when extended property type is decorated with [SafeToLog]")]
         public async Task NoDiagnosticsReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -52,31 +51,31 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.SafeToLog));
         }
 
-        [DataTestMethod]
-        [DataRow("string", DisplayName = "No diagnostics are reported for extended properties of type string")]
-        [DataRow("bool", DisplayName = "No diagnostics are reported for extended properties of type bool")]
-        [DataRow("char", DisplayName = "No diagnostics are reported for extended properties of type char")]
-        [DataRow("short", DisplayName = "No diagnostics are reported for extended properties of type short")]
-        [DataRow("int", DisplayName = "No diagnostics are reported for extended properties of type int")]
-        [DataRow("long", DisplayName = "No diagnostics are reported for extended properties of type long")]
-        [DataRow("ushort", DisplayName = "No diagnostics are reported for extended properties of type ushort")]
-        [DataRow("uint", DisplayName = "No diagnostics are reported for extended properties of type uint")]
-        [DataRow("ulong", DisplayName = "No diagnostics are reported for extended properties of type ulong")]
-        [DataRow("byte", DisplayName = "No diagnostics are reported for extended properties of type byte")]
-        [DataRow("sbyte", DisplayName = "No diagnostics are reported for extended properties of type sbyte")]
-        [DataRow("float", DisplayName = "No diagnostics are reported for extended properties of type float")]
-        [DataRow("double", DisplayName = "No diagnostics are reported for extended properties of type double")]
-        [DataRow("decimal", DisplayName = "No diagnostics are reported for extended properties of type decimal")]
-        [DataRow("DateTime", DisplayName = "No diagnostics are reported for extended properties of type DateTime")]
-        [DataRow("IntPtr", DisplayName = "No diagnostics are reported for extended properties of type IntPtr")]
-        [DataRow("UIntPtr", DisplayName = "No diagnostics are reported for extended properties of type UIntPtr")]
-        [DataRow("TimeSpan", DisplayName = "No diagnostics are reported for extended properties of type TimeSpan")]
-        [DataRow("DateTimeOffset", DisplayName = "No diagnostics are reported for extended properties of type DateTimeOffset")]
-        [DataRow("Guid", DisplayName = "No diagnostics are reported for extended properties of type Guid")]
-        [DataRow("Uri", DisplayName = "No diagnostics are reported for extended properties of type Uri")]
-        [DataRow("System.Text.Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
-        [DataRow("Type", DisplayName = "No diagnostics are reported for extended properties of type Type")]
-        [DataRow("TypeCode", DisplayName = "No diagnostics are reported for extended properties of an enum type")]
+        [Theory(DisplayName = "No diagnostics are reported for extended properties of specified type")]
+        [InlineData("string")]
+        [InlineData("bool")]
+        [InlineData("char")]
+        [InlineData("short")]
+        [InlineData("int")]
+        [InlineData("long")]
+        [InlineData("ushort")]
+        [InlineData("uint")]
+        [InlineData("ulong")]
+        [InlineData("byte")]
+        [InlineData("sbyte")]
+        [InlineData("float")]
+        [InlineData("double")]
+        [InlineData("decimal")]
+        [InlineData("DateTime")]
+        [InlineData("IntPtr")]
+        [InlineData("UIntPtr")]
+        [InlineData("TimeSpan")]
+        [InlineData("DateTimeOffset")]
+        [InlineData("Guid")]
+        [InlineData("Uri")]
+        [InlineData("System.Text.Encoding")]
+        [InlineData("Type")]
+        [InlineData("TypeCode")]
         public async Task NoDiagnosticsReported3(string extendedPropertyType)
         {
             await RockLibVerifier.VerifyAnalyzerAsync(

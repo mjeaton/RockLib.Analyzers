@@ -211,9 +211,9 @@ namespace RockLib.Logging.Analyzers
                     var variableDeclarator = (IVariableDeclaratorOperation)semanticModel.GetOperation(variable);
                     if (SymbolEqualityComparer.Default.Equals(variableDeclarator.Symbol, extendedPropertiesSymbol)
                         && variableDeclarator.Initializer?.Value is IObjectCreationOperation objectCreation
-                        && objectCreation.Initializer is IObjectOrCollectionInitializerOperation collectionInitializer)
+                        && objectCreation.Initializer != null)
                     {
-                        foreach (var initializer in collectionInitializer.Initializers)
+                        foreach (var initializer in objectCreation.Initializer.Initializers)
                         {
                             if (initializer is IInvocationOperation initializerInvocation
                                 && initializerInvocation.TargetMethod.Name == "Add"
