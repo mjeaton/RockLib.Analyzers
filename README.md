@@ -8,3 +8,7 @@ Analyzers for [RockLib.Logging](https://github.com/RockLib/RockLib.Logging#rockl
 ### RockLib.Logging.Microsoft.Extensions.Analyzers [![Build status](https://ci.appveyor.com/api/projects/status/9m7q9hwn3ypl8kdk?svg=true)](https://ci.appveyor.com/project/RockLib/rocklib-logging-microsoft-extensions-analyzers) [![NuGet](https://img.shields.io/nuget/vpre/RockLib.Logging.Microsoft.Extensions.Analyzers.svg)](https://www.nuget.org/packages/RockLib.Logging.Microsoft.Extensions.Analyzers)
 
 Analyzers for [RockLib.Logging.Microsoft.Extensions](https://github.com/RockLib/RockLib.Logging#rocklibloggingmicrosoftextensions--).
+
+### RockLib.Logging.AspNetCore.Analyzers [![Build status](https://ci.appveyor.com/api/projects/status/3fwdas1035h13kn4?svg=true)](https://ci.appveyor.com/project/RockLib/rocklib-logging-aspnetcore-analyzers) [![NuGet](https://img.shields.io/nuget/vpre/RockLib.Logging.AspNetCore.Analyzers.svg)](https://www.nuget.org/packages/RockLib.Logging.AspNetCore.Analyzers)
+
+Analyzers for [RockLib.Logging.AspNetCore](https://github.com/RockLib/RockLib.Logging#rocklibloggingaspnetcore--).
