@@ -1,4 +1,4 @@
-# RockLib.Logging.Microsoft.Extensions.Analyzers Changelog
+# RockLib.Logging.AspNetCore.Analyzers Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -9,5 +9,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
-- Adds analyzer and codefix for RockLib0002: Logger should be synchronous
-- Adds analyzer for RockLib0003: RockLibLoggerProvider has missing logger
+- Adds analyzer for RockLib0004: Add InfoLog attribute
