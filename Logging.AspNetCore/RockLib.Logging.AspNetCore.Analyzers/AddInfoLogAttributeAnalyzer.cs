@@ -10,8 +10,8 @@ namespace RockLib.Logging.AspNetCore.Analyzers
     public class AddInfoLogAttributeAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Add InfoLog attribute";
-        private static readonly LocalizableString _messageFormat = "Add an InfoLog attribute to the {0} controller";
-        private static readonly LocalizableString _description = "Add an InfoLog attribute to the controller to automatically controller actions.";
+        private static readonly LocalizableString _messageFormat = "Add an [InfoLog] attribute to the {0}";
+        private static readonly LocalizableString _description = "Add an [InfoLog] attribute to automatically log controller actions.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticIds.AddInfoLogAttribute,
@@ -72,7 +72,7 @@ namespace RockLib.Logging.AspNetCore.Analyzers
                         if (method.MethodKind == MethodKind.Ordinary && HasInfoLogAttribute(method))
                             return;
 
-                    var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name);
+                    var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], $"{namedTypeSymbol.Name} controller");
                     context.ReportDiagnostic(diagnostic);
                 }
             }
@@ -89,7 +89,7 @@ namespace RockLib.Logging.AspNetCore.Analyzers
                         && (HasInfoLogAttribute(containingType) || HasInfoLogAttribute(methodSymbol)))
                         return;
 
-                    var diagnostic = Diagnostic.Create(Rule, methodSymbol.Locations[0], methodSymbol.Name);
+                    var diagnostic = Diagnostic.Create(Rule, methodSymbol.Locations[0], $"{methodSymbol.Name} action method");
                     context.ReportDiagnostic(diagnostic);
                 }
             }
