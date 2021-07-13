@@ -56,6 +56,6 @@ namespace TestingNamespace
 ## How to suppress violations
 
 ```c#
-#pragma warning disable RockLib0004// Add InfoLog attribute
-#pragma warning restore RockLib0004// Add InfoLog attribute
+#pragma warning disable RockLib0004 // Add InfoLog attribute
+#pragma warning restore RockLib0004 // Add InfoLog attribute
 ```
