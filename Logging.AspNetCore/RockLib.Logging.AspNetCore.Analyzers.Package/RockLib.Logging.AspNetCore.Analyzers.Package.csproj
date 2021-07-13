@@ -12,13 +12,13 @@
     <PackageVersion>1.0.0</PackageVersion>
     <Authors>RockLib</Authors>
     <PackageProjectUrl>https://github.com/RockLib/RockLib.Analyzers</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers</RepositoryUrl>
+    <RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Description>RockLib.Logging.AspNetCore.Analyzers</Description>
+    <Description>Roslyn analyzers for RockLib.Logging.AspNetCore</Description>
     <PackageReleaseNotes>A changelog is available at https://github.com/RockLib/RockLib.Analyzers/blob/main/Logging.AspNetCore/CHANGELOG.md.</PackageReleaseNotes>
-    <Copyright>Copyright</Copyright>
+    <Copyright>Copyright 2021 (c) Quicken Loans Corporation. All rights reserved.</Copyright>
     <PackageTags>RockLib.Logging.AspNetCore.Analyzers, analyzers</PackageTags>
     <NoPackageAnalysis>true</NoPackageAnalysis>
 
