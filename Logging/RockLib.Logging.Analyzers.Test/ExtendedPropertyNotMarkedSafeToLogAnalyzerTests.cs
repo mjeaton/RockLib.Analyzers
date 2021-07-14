@@ -86,6 +86,37 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.None));
         }
 
+        [Fact(DisplayName = "No diagnostics are reported when extended property base type has property marked with [SafeToLog]")]
+        public async Task NoDiagnosticsReported4()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClassDerived",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.SafeToLog,
+                    classDecoration: Decoration.None) + @"
+
+public class TestClassDerived : TestClass
+{
+}");
+        }
+
+        [Fact(DisplayName = "No diagnostics are reported when extended property type is decorated with [SafeToLog] but properties are defined in base type")]
+        public async Task NoDiagnosticsReported5()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClassDerived",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None) + @"
+
+[SafeToLog]
+public class TestClassDerived : TestClass
+{
+}");
+        }
+
         private static string GetTestCode(string extendedPropertyType, bool shouldReportDiagnostic,
             Decoration propertyDecoration, Decoration classDecoration)
         {
