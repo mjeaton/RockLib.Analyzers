@@ -29,6 +29,26 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.SafeToLog));
         }
 
+        [Fact(DisplayName = "Diagnostrics are reported when extended property type is decorated with SafeToLogAttribute at runtime but all properties are decorated with NotSafeToLogAttribute at runtime")]
+        public async Task DiagnosticsReported3()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClass",
+                    shouldReportDiagnostic: true,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None) + @"
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        SafeToLogAttribute.Decorate<TestClass>();
+        NotSafeToLogAttribute.Decorate<TestClass>(testClass => testClass.ExampleProperty);
+    }
+}");
+        }
+
         [Fact(DisplayName = "No diagnostics are reported when extended property type has property decorated with [SafeToLog]")]
         public async Task NoDiagnosticsReported1()
         {
@@ -114,6 +134,63 @@ public class TestClassDerived : TestClass
 [SafeToLog]
 public class TestClassDerived : TestClass
 {
+}");
+        }
+
+        [Fact(DisplayName = "No diagnostics are reported when extended property type is decorated with SafeToLogAttribute at runtime (generic method)")]
+        public async Task NoDiagnosticsReported6()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClass",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None) + @"
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        SafeToLogAttribute.Decorate<TestClass>();
+    }
+}");
+        }
+
+        [Fact(DisplayName = "No diagnostics are reported when extended property type is decorated with SafeToLogAttribute at runtime (non-generic method)")]
+        public async Task NoDiagnosticsReported7()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClass",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None) + @"
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        SafeToLogAttribute.Decorate(typeof(TestClass));
+    }
+}");
+        }
+
+        [Fact(DisplayName = "No diagnostics are reported when extended property type has property decorated with SafeToLogAttribute at runtime")]
+        public async Task NoDiagnosticsReported8()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(
+                GetTestCode(
+                    extendedPropertyType: "TestClass",
+                    shouldReportDiagnostic: false,
+                    propertyDecoration: Decoration.None,
+                    classDecoration: Decoration.None) + @"
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        SafeToLogAttribute.Decorate<TestClass>(testClass => testClass.ExampleProperty);
+    }
 }");
         }
 

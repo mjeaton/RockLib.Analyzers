@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 
 - RockLib0000: Include base classes when identifying public properties.
+- RockLib0000: Look for calls to `SafeToLogAttribute.Decorate` and `NotSafeToLogAttribute.Decorate` when determining if a type or property has been marked as safe to log.
 
 ## 1.0.1
 
