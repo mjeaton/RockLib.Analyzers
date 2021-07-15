@@ -69,9 +69,27 @@ namespace RockLib.Logging.Analyzers
             return false;
         }
 
-        public static IEnumerable<IPropertySymbol> GetPublicProperties(this ITypeSymbol type) =>
-            type.GetMembers().OfType<IPropertySymbol>().Where(p =>
-                p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
+        public static IEnumerable<IPropertySymbol> GetPublicProperties(this ITypeSymbol type)
+        {
+            if (type.SpecialType == SpecialType.System_Object)
+                return Enumerable.Empty<IPropertySymbol>();
+
+            var properties = GetProperties(type);
+
+            while (true)
+            {
+                type = type.BaseType;
+                if (type.SpecialType == SpecialType.System_Object)
+                    break;
+                properties = properties.Concat(GetProperties(type));
+            }
+
+            return properties;
+
+            IEnumerable<IPropertySymbol> GetProperties(ITypeSymbol t) =>
+                t.GetMembers().OfType<IPropertySymbol>().Where(p =>
+                    p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
+        }
 
         public static bool IsValueType(this ITypeSymbol type)
         {
@@ -162,7 +180,7 @@ namespace RockLib.Logging.Analyzers
                 if (semanticModel.GetOperation(node) is IInvocationOperation operation)
                 {
                     if (!operation.TargetMethod.IsStatic
-                        &&(operation.TargetMethod.Name == "Add" || operation.TargetMethod.Name == "TryAdd")
+                        && (operation.TargetMethod.Name == "Add" || operation.TargetMethod.Name == "TryAdd")
                         && operation.TargetMethod.Parameters.Length == 2
                         && ((operation.Instance is ILocalReferenceOperation localReference
                             && SymbolEqualityComparer.Default.Equals(localReference.Local, extendedPropertiesSymbol))

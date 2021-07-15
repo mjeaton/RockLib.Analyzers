@@ -7,7 +7,7 @@ namespace RockLib.Logging.Analyzers.Test
 {
     public class UseSanitizingLoggingMethodAnalyzerTests
     {
-        [Fact(DisplayName = "Diagnostrics are reported when setting extended property with a non-value type")]
+        [Fact(DisplayName = "Diagnostics are reported when setting extended property with a non-value type")]
         public async Task DiagnosticsReported()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(

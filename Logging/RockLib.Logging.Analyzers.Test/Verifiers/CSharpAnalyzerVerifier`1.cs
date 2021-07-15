@@ -32,7 +32,7 @@ namespace RockLib.Logging.Analyzers.Test
                 TestCode = source,
                 ReferenceAssemblies = ReferenceAssemblies.Default
                     .AddPackages(ImmutableArray.Create(
-                        new PackageIdentity("RockLib.Logging", "3.0.2")))
+                        new PackageIdentity("RockLib.Logging", "3.0.5")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
