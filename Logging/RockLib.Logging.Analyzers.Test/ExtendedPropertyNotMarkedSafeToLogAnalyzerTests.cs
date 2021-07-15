@@ -7,7 +7,7 @@ namespace RockLib.Logging.Analyzers.Test
 {
     public class ExtendedPropertyNotMarkedSafeToLogAnalyzerTests
     {
-        [Fact(DisplayName = "Diagnostrics are reported when extended property type is not marked as safe to log")]
+        [Fact(DisplayName = "Diagnostics are reported when extended property type is not marked as safe to log")]
         public async Task DiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -18,7 +18,7 @@ namespace RockLib.Logging.Analyzers.Test
                     classDecoration: Decoration.None));
         }
 
-        [Fact(DisplayName = "Diagnostrics are reported when extended property type is decorated with [SafeToLog] but all properties are decorated with [NotSafeToLog]")]
+        [Fact(DisplayName = "Diagnostics are reported when extended property type is decorated with [SafeToLog] but all properties are decorated with [NotSafeToLog]")]
         public async Task DiagnosticsReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
