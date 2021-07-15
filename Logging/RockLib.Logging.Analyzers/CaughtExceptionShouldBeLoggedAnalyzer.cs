@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -11,8 +10,8 @@ namespace RockLib.Logging.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
     {
-        private static readonly LocalizableString _title = "The caught exception should be passed into the logging method";
-        private static readonly LocalizableString _messageFormat = "The caught {0} exception should be passed into the logging method";
+        private static readonly LocalizableString _title = "Caught exception should be logged";
+        private static readonly LocalizableString _messageFormat = "The caught exception should be passed into the logging method";
         private static readonly LocalizableString _description = "If a logging method is inside a catch block, the caught exception should be passed to it.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
@@ -36,10 +35,6 @@ namespace RockLib.Logging.Analyzers
 
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
-            var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
-            if (logEntryType == null)
-                return;
-
             var loggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LoggingExtensions");
             if (loggingExtensionsType == null)
                 return;
@@ -48,23 +43,27 @@ namespace RockLib.Logging.Analyzers
             if (safeLoggingExtensionsType == null)
                 return;
 
-            var analyzer = new InvocationOperationAnalyzer(logEntryType, loggingExtensionsType, safeLoggingExtensionsType);
+            var loggerType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.ILogger");
+            if (loggerType == null)
+                return;
+
+            var analyzer = new InvocationOperationAnalyzer(loggingExtensionsType, safeLoggingExtensionsType, loggerType);
 
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
         private class InvocationOperationAnalyzer
         {
-            private readonly INamedTypeSymbol _logEntryType;
             private readonly INamedTypeSymbol _loggingExtensionsType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
+            private readonly INamedTypeSymbol _loggerType;
 
-            public InvocationOperationAnalyzer(INamedTypeSymbol logEntryType, INamedTypeSymbol loggingExtensionsType,
-                INamedTypeSymbol safeLoggingExtensionsType)
+            public InvocationOperationAnalyzer(INamedTypeSymbol loggingExtensionsType, INamedTypeSymbol safeLoggingExtensionsType,
+                INamedTypeSymbol loggerType)
             {
-                _logEntryType = logEntryType;
                 _loggingExtensionsType = loggingExtensionsType;
                 _safeLoggingExtensionsType = safeLoggingExtensionsType;
+                _loggerType = loggerType;
             }
 
             public void Analyze(OperationAnalysisContext context)
@@ -72,48 +71,157 @@ namespace RockLib.Logging.Analyzers
                 var invocationOperation = (IInvocationOperation)context.Operation;
                 var methodSymbol = invocationOperation.TargetMethod;
 
-                //TODO: LogEntry initializer?
-                if (methodSymbol.MethodKind == MethodKind.Constructor)
+                if (methodSymbol.MethodKind != MethodKind.Ordinary
+                    || !(GetCatchClause(invocationOperation) is ICatchClauseOperation catchClause))
                 {
-                    //LogEntry constructor
+                    return;
                 }
-                else if (methodSymbol.MethodKind == MethodKind.Ordinary)
+
+                if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
+                    || SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
                 {
-                    var containingType = methodSymbol.ContainingType;
-                    if (!SymbolEqualityComparer.Default.Equals(containingType, _loggingExtensionsType) 
-                        && !SymbolEqualityComparer.Default.Equals(containingType, _safeLoggingExtensionsType))
+                    if (ParameterCapturesCatchException(invocationOperation, catchClause))
                         return;
-
-                    if (ContainsExceptionParameter(invocationOperation))
-                        return;
-
-                    if (!IsInCatchBlock(invocationOperation))
-                        return;
-
-                    var diagnostic = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation());
-                    context.ReportDiagnostic(diagnostic);
                 }
+                else if (methodSymbol.Name == "Log"
+                    && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType))
+                {
+                    // Is the log entry created locally and has its exception has been set? (see NoLogLevelSpecifiedAnalyzer for inspiration)
+
+                    var logEntryArgument = invocationOperation.Arguments[0];
+                    var logEntryCreation = GetLogEntryCreationOperation(logEntryArgument);
+
+                    if (logEntryCreation == null
+                        || IsExceptionSet(logEntryCreation, logEntryArgument.Value))
+                    {
+                        return;
+                    }
+                }
+                else
+                    return;
+
+                var diagnostic = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation());
+                context.ReportDiagnostic(diagnostic);
             }
 
-            private bool IsInCatchBlock(IInvocationOperation invocationOperation)
+            private ICatchClauseOperation GetCatchClause(IInvocationOperation invocationOperation)
             {
                 var parent = invocationOperation.Parent;
                 while (parent != null)
                 {
                     //TODO: Other catch operations?
-                    if (parent is ICatchClauseOperation)
-                        return true;
+                    if (parent is ICatchClauseOperation catchClause)
+                        return catchClause;
                     parent = parent.Parent;
                 }
-                return false;
+                return null;
             }
 
-            private bool ContainsExceptionParameter(IInvocationOperation invocationOperation)
+            private bool ParameterCapturesCatchException(IInvocationOperation invocationOperation,
+                ICatchClauseOperation catchClause)
             {
+                if (catchClause.ExceptionDeclarationOrExpression is null)
+                    return false;
+
                 var argument = invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
                 if (argument == null || argument.IsImplicit)
                     return false;
-                return true;
+
+                if (argument.Value is ILocalReferenceOperation localReference
+                    && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
+                {
+                    return SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol);
+                }
+
+                return false;
+            }
+
+            private IObjectCreationOperation GetLogEntryCreationOperation(IArgumentOperation logEntryArgument)
+            {
+                if (logEntryArgument.Value is IObjectCreationOperation objectCreation)
+                    return objectCreation;
+
+                if (logEntryArgument.Value is ILocalReferenceOperation localReference)
+                {
+                    var semanticModel = localReference.SemanticModel;
+                    var dataflow = semanticModel.AnalyzeDataFlow(localReference.Syntax);
+
+                    return dataflow.DataFlowsIn
+                        .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetObjectCreationOperation))
+                        .FirstOrDefault(operation => operation != null);
+
+                    IObjectCreationOperation GetObjectCreationOperation(SyntaxReference syntaxReference)
+                    {
+                        var syntax = syntaxReference.GetSyntax();
+
+                        if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
+                            && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
+                        {
+                            return variableInitializerOperation.Value as IObjectCreationOperation;
+                        }
+
+                        return null;
+                    }
+                }
+
+                return null;
+            }
+
+            private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue)
+            {
+                if (logEntryCreation.Arguments.Length > 0)
+                {
+                    var exceptionArgument = logEntryCreation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
+                    if (exceptionArgument != null && !exceptionArgument.IsImplicit)
+                        return true;
+                }
+
+                if (logEntryCreation.Initializer != null)
+                {
+                    foreach (var initializer in logEntryCreation.Initializer.Initializers)
+                    {
+                        if (initializer is ISimpleAssignmentOperation assignment
+                            && assignment.Target is IPropertyReferenceOperation property
+                            && property.Property.Name == "Exception")
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                if (logEntryArgumentValue is ILocalReferenceOperation logEntryReference)
+                {
+                    var visitor = new SimpleAssignmentWalker(logEntryReference);
+                    visitor.Visit(logEntryCreation.GetRootOperation());
+                    return visitor.IsExceptionSet;
+                }
+
+                return false;
+            }
+
+            private class SimpleAssignmentWalker : OperationWalker
+            {
+                private readonly ILocalReferenceOperation _logEntryReference;
+
+                public SimpleAssignmentWalker(ILocalReferenceOperation logEntryReference)
+                {
+                    _logEntryReference = logEntryReference;
+                }
+
+                public bool IsExceptionSet { get; private set; }
+
+                public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)
+                {
+                    if (operation.Target is IPropertyReferenceOperation property
+                        && property.Property.Name == "Exception"
+                        && property.Instance is ILocalReferenceOperation localReference
+                        && SymbolEqualityComparer.Default.Equals(localReference.Local, _logEntryReference.Local))
+                    {
+                        IsExceptionSet = true;
+                    }
+
+                    base.VisitSimpleAssignment(operation);
+                }
             }
         }
     }
