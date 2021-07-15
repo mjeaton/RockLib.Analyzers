@@ -8,153 +8,156 @@ namespace RockLib.Logging.AspNetCore.Analyzers.Test
     [TestClass]
     public class AddInfoLogAttributeAnalyzerTests
     {
-        [TestMethod("Diagnostics are reported when type inherits from ControllerBase and type does not have InfoLog attribute")]
+        [TestMethod("Diagnostics are reported on type and action methods when class name ends in 'Controller'")]
         public async Task DiagnosticReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using Microsoft.AspNetCore.Mvc;
 
-namespace UnitTestingNamespace
+public class [|TestController|]
 {
-    [ApiController]
-    [Route(""[controller]"")]
-    public class [|TestController|] : ControllerBase
+    // Action methods:
+
+    public string [|Get|]() => ""Get"";
+
+    // Non-action methods:
+
+    public TestController()
     {
     }
-}
-");
+
+    public static string Foo(string foo) => foo;
+
+    private string Bar(string bar) => bar;
+
+    [NonAction]
+    public string Baz(string baz) => baz;
+
+    public string Qux<T>(string qux) => qux;
+
+    public override string ToString() => ""TestController"";
+}");
         }
 
-        [TestMethod("Diagnostics are reported when type inherits from ControllerBase and type and methods do not have InfoLog attributes")]
+        [TestMethod("Diagnostics are reported on type and action methods when class is decorated with [Controller] attribute")]
         public async Task DiagnosticReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using Microsoft.AspNetCore.Mvc;
 
-namespace UnitTestingNamespace
+[Controller]
+public class [|Test|]
 {
-    [ApiController]
-    [Route(""[controller]"")]
-    public class [|TestController|] : ControllerBase
+    // Action methods:
+
+    public string [|Get|]() => ""Get"";
+
+    // Non-action methods:
+
+    public Test()
     {
-        [HttpGet]
-        public string [|Get|]()
-        {
-            return ""Get"";
-        }
     }
-}
-");
+
+    public static string Foo(string foo) => foo;
+
+    private string Bar(string bar) => bar;
+
+    [NonAction]
+    public string Baz(string baz) => baz;
+
+    public string Qux<T>(string qux) => qux;
+
+    public override string ToString() => ""TestController"";
+}");
         }
 
-        [TestMethod("Diagnostics are reported when type inherits from ControllerBase and some methods do not have InfoLog attributes")]
-        public async Task DiagnosticReported3()
+        [TestMethod("No diagnostics are reported when controller is decorated with [InfoLog] attribute")]
+        public async Task NoDiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
-using Microsoft.AspNetCore.Mvc;
 using RockLib.Logging.AspNetCore;
 
-namespace UnitTestingNamespace
+[InfoLog]
+public class TestController
 {
-    [ApiController]
-    [Route(""[controller]"")]
-    public class TestController : ControllerBase
-    {
-        [HttpGet]
-        [InfoLog]
-        public string Get()
-        {
-            return ""Get"";
+    public string Get() => ""Get"";
+}");
         }
 
-        [HttpPut]
-        public string [|Put|]()
-        {
-            return ""Put"";
-        }
-
-        [HttpPost]
-        public string [|Post|]()
-        {
-            return ""Post"";
-        }
-    }
-}
-");
-        }
-
-        [TestMethod("Diagnostics are not reported when type inherits from ControllerBase and type has InfoLog attributes")]
-        public async Task DiagnosticNotReported1()
+        [TestMethod("No diagnostics are reported when action methods are decorated with [InfoLog] attribute")]
+        public async Task NoDiagnosticsReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
-using Microsoft.AspNetCore.Mvc;
 using RockLib.Logging.AspNetCore;
 
-namespace UnitTestingNamespace
+public class TestController
 {
-    [ApiController]
-    [Route(""[controller]"")]
     [InfoLog]
-    public class TestController : ControllerBase
-    {
-        [HttpGet]
-        public string Get()
-        {
-            return ""Get"";
+    public string Get() => ""Get"";
+}");
         }
 
-        [HttpPut]
-        public string Put()
+        [TestMethod("No diagnostics are reported when type is struct")]
+        public async Task NoDiagnosticsReported3()
         {
-            return ""Put"";
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+public struct TestController
+{
+    public string Get() => ""Get"";
+}");
         }
 
-        [HttpPost]
-        public string Post()
+        [TestMethod("No diagnostics are reported when class is abstract")]
+        public async Task NoDiagnosticsReported4()
         {
-            return ""Post"";
-        }
-    }
-}
-");
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+public abstract class TestController
+{
+    public string Get() => ""Get"";
+}");
         }
 
-        [TestMethod("Diagnostics are not reported when type inherits from ControllerBase and all methods have InfoLog attributes")]
-        public async Task DiagnosticNotReported2()
+        [TestMethod("No diagnostics are reported when class is not public")]
+        public async Task NoDiagnosticsReported5()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+internal class TestController
+{
+    public string Get() => ""Get"";
+}");
+        }
+
+        [TestMethod("No diagnostics are reported when class is generic")]
+        public async Task NoDiagnosticsReported6()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+public class TestController<T>
+{
+    public string Get() => ""Get"";
+}");
+        }
+
+        [TestMethod("No diagnostics are reported when class is decorated with [NonController] attribute")]
+        public async Task NoDiagnosticsReported7()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using Microsoft.AspNetCore.Mvc;
-using RockLib.Logging.AspNetCore;
 
-namespace UnitTestingNamespace
+[NonController]
+public class TestController
 {
-    [ApiController]
-    [Route(""[controller]"")]
-    public class TestController : ControllerBase
-    {
-        [HttpGet]
-        [InfoLog]
-        public string Get()
-        {
-            return ""Get"";
+    public string Get() => ""Get"";
+}");
         }
 
-        [HttpPut]
-        [InfoLog]
-        public string Put()
+        [TestMethod("No diagnostics are reported when class is not decorated with [Controller] attribute and name does not end with 'Controller'")]
+        public async Task NoDiagnosticsReported8()
         {
-            return ""Put"";
-        }
-
-        [HttpPost]
-        [InfoLog]
-        public string Post()
-        {
-            return ""Post"";
-        }
-    }
-}
-");
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+public class Test
+{
+    public string Get() => ""Get"";
+}");
         }
     }
 }
