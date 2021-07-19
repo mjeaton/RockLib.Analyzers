@@ -86,13 +86,11 @@ namespace RockLib.Logging.Analyzers
                 else if (methodSymbol.Name == "Log"
                     && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType))
                 {
-                    // Is the log entry created locally and has its exception has been set? (see NoLogLevelSpecifiedAnalyzer for inspiration)
-
                     var logEntryArgument = invocationOperation.Arguments[0];
                     var logEntryCreation = GetLogEntryCreationOperation(logEntryArgument);
 
                     if (logEntryCreation == null
-                        || IsExceptionSet(logEntryCreation, logEntryArgument.Value))
+                        || IsExceptionSet(logEntryCreation, logEntryArgument.Value, catchClause))
                     {
                         return;
                     }
@@ -167,13 +165,24 @@ namespace RockLib.Logging.Analyzers
                 return null;
             }
 
-            private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue)
+            private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
+                ICatchClauseOperation catchClause)
             {
+                if (catchClause.ExceptionDeclarationOrExpression is null)
+                    return false;
+
                 if (logEntryCreation.Arguments.Length > 0)
                 {
                     var exceptionArgument = logEntryCreation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
                     if (exceptionArgument != null && !exceptionArgument.IsImplicit)
-                        return true;
+                    {
+                        if (exceptionArgument.Value is ILocalReferenceOperation localReference
+                            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
+                            && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
+                        {
+                            return true;
+                        }
+                    }
                 }
 
                 if (logEntryCreation.Initializer != null)
@@ -184,7 +193,12 @@ namespace RockLib.Logging.Analyzers
                             && assignment.Target is IPropertyReferenceOperation property
                             && property.Property.Name == "Exception")
                         {
-                            return true;
+                            if (assignment.Value is ILocalReferenceOperation localReference
+                                && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
+                                && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
+                            {
+                                return true;
+                            }
                         }
                     }
                 }

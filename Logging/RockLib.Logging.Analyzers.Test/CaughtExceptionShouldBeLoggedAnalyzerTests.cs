@@ -68,6 +68,130 @@ public class Test
 }");
         }
 
+        [Fact(DisplayName = "Diagnostics are reported when null exception is passed to logging extension methods")]
+        public async Task DiagnosticsReported3()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (Exception ex)
+        {
+            [|logger.Debug(""A debug log with null exception"", null, new { foo = 123 })|];
+            [|logger.Info(""An info log with null exception"", null, new { foo = 123 })|];
+            [|logger.Warn(""A warn log with null exception"", null, new { foo = 123 })|];
+            [|logger.Error(""An error log with null exception"", null, new { foo = 123 })|];
+            [|logger.Fatal(""A fatal log with null exception"", null, new { foo = 123 })|];
+            [|logger.Audit(""An audit log with null exception"", null, new { foo = 123 })|];
+
+            [|logger.DebugSanitized(""A debug log with null exception"", null, new { foo = 123 })|];
+            [|logger.InfoSanitized(""An info log with null exception"", null, new { foo = 123 })|];
+            [|logger.WarnSanitized(""A warn log with null exception"", null, new { foo = 123 })|];
+            [|logger.ErrorSanitized(""An error log with null exception"", null, new { foo = 123 })|];
+            [|logger.FatalSanitized(""A fatal log with null exception"", null, new { foo = 123 })|];
+            [|logger.AuditSanitized(""An audit log with null exception"", null, new { foo = 123 })|];
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are reported when null exception is passed to log entry")]
+        public async Task DiagnosticsReported4()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (Exception ex)
+        {
+            var logEntry = new LogEntry(""A log with null exception"", null, LogLevel.Info);
+            [|logger.Log(logEntry)|];
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are reported when some other exception is passed to logging extension methods")]
+        public async Task DiagnosticsReported5()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        var someOtherException = new InvalidOperationException(""Some other exception"");
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (Exception ex)
+        {
+            [|logger.Debug(""A debug log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.Info(""An info log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.Warn(""A warn log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.Error(""An error log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.Fatal(""A fatal log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.Audit(""An audit log with some other exception"", someOtherException, new { foo = 123 })|];
+
+            [|logger.DebugSanitized(""A debug log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.InfoSanitized(""An info log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.WarnSanitized(""A warn log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.ErrorSanitized(""An error log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.FatalSanitized(""A fatal log with some other exception"", someOtherException, new { foo = 123 })|];
+            [|logger.AuditSanitized(""An audit log with some other exception"", someOtherException, new { foo = 123 })|];
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are reported when some other exception is passed to log entry")]
+        public async Task DiagnosticsReported6()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        var someOtherException = new InvalidOperationException(""Some other exception"");
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (Exception ex)
+        {
+            var logEntry = new LogEntry(""A log with some other exception"", someOtherException, LogLevel.Info);
+            [|logger.Log(logEntry)|];
+        }
+    }
+}");
+        }
+
         [Fact(DisplayName = "No diagnostics are reported when exception is passed to logging extension methods")]
         public async Task NoDiagnosticsReported1()
         {
