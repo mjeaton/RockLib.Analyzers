@@ -15,14 +15,14 @@ namespace RockLib.Logging.Analyzers
         private static readonly LocalizableString _description = "If a logging method is inside a catch block, the caught exception should be passed to it.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-            DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog,
+            DiagnosticIds.CaughtExceptionShouldBeLogged,
             _title,
             _messageFormat,
             DiagnosticCategory.Usage,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog));
+            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.CaughtExceptionShouldBeLogged));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
