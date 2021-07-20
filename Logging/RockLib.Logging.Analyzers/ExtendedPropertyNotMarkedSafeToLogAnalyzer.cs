@@ -1,10 +1,14 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 
 namespace RockLib.Logging.Analyzers
 {
@@ -53,7 +57,7 @@ namespace RockLib.Logging.Analyzers
                 return;
 
             var analyzer = new InvocationOperationAnalyzer(logEntryType, safeLoggingExtensionsType,
-                safeToLogAttributeType, notSafeToLogAttributeType);
+                safeToLogAttributeType, notSafeToLogAttributeType, context.Compilation, context.CancellationToken);
 
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
@@ -64,14 +68,19 @@ namespace RockLib.Logging.Analyzers
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
             private readonly INamedTypeSymbol _safeToLogAttributeType;
             private readonly INamedTypeSymbol _notSafeToLogAttributeType;
+            private readonly Compilation _compilation;
+            private readonly CancellationToken _cancellationToken;
 
             public InvocationOperationAnalyzer(INamedTypeSymbol logEntryType, INamedTypeSymbol safeLoggingExtensionsType,
-                INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType)
+                INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType,
+                Compilation compilation, CancellationToken cancellationToken)
             {
                 _logEntryType = logEntryType;
                 _safeLoggingExtensionsType = safeLoggingExtensionsType;
                 _safeToLogAttributeType = safeToLogAttributeType;
                 _notSafeToLogAttributeType = notSafeToLogAttributeType;
+                _compilation = compilation;
+                _cancellationToken = cancellationToken;
             }
 
             public void Analyze(OperationAnalysisContext context)
@@ -133,14 +142,17 @@ namespace RockLib.Logging.Analyzers
                 if (propertyValue.Type is null || propertyValue.Type.IsValueType())
                     return;
 
-                if (IsDecoratedWithSafeToLogAttribute(propertyValue.Type))
+                var publicProperties = propertyValue.Type.GetPublicProperties();
+                GetRuntimeDecorateTargets(out var runtimeSafeToLogTargets, out var runtimeNotSafeToLogTargets);
+
+                if (IsDecoratedWithSafeToLogAttribute(propertyValue.Type, runtimeSafeToLogTargets))
                 {
-                    if (propertyValue.Type.GetPublicProperties().Any(IsNotDecoratedWithNotSafeToLogAttribute))
+                    if (publicProperties.Any(p => IsNotDecoratedWithNotSafeToLogAttribute(p, runtimeNotSafeToLogTargets)))
                         return;
                 }
                 else
                 {
-                    if (propertyValue.Type.GetPublicProperties().Any(IsDecoratedWithSafeToLogAttribute))
+                    if (publicProperties.Any(p => IsDecoratedWithSafeToLogAttribute(p, runtimeSafeToLogTargets)))
                         return;
                 }
 
@@ -149,13 +161,102 @@ namespace RockLib.Logging.Analyzers
                 reportDiagnostic(diagnostic);
             }
 
-            private bool IsDecoratedWithSafeToLogAttribute(ISymbol symbol) =>
-                symbol.GetAttributes().Any(attribute =>
-                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _safeToLogAttributeType));
+            private void GetRuntimeDecorateTargets(
+                out IReadOnlyList<ISymbol> runtimeSafeToLogTargets,
+                out IReadOnlyList<ISymbol> runtimeNotSafeToLogTargets)
+            {
+                var visitor = new SyntaxWalker(_safeToLogAttributeType, _notSafeToLogAttributeType, _cancellationToken);
+                visitor.Visit(_compilation);
+                runtimeSafeToLogTargets = visitor.SafeToLogTargets;
+                runtimeNotSafeToLogTargets = visitor.NotSafeToLogTargets;
+            }
 
-            private bool IsNotDecoratedWithNotSafeToLogAttribute(ISymbol symbol) =>
+            private bool IsDecoratedWithSafeToLogAttribute(ISymbol symbol, IReadOnlyList<ISymbol> safeToLogDecorateTargets) =>
+                symbol.GetAttributes().Any(attribute =>
+                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _safeToLogAttributeType))
+                || safeToLogDecorateTargets.Any(
+                    target => SymbolEqualityComparer.Default.Equals(symbol, target));
+
+            private bool IsNotDecoratedWithNotSafeToLogAttribute(ISymbol symbol, IReadOnlyList<ISymbol> notSafeToLogDecorateTargets) =>
                 !symbol.GetAttributes().Any(attribute =>
-                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _notSafeToLogAttributeType));
+                    SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _notSafeToLogAttributeType))
+                && !notSafeToLogDecorateTargets.Any(target =>
+                    SymbolEqualityComparer.Default.Equals(symbol, target));
+
+            private class SyntaxWalker : CSharpSyntaxWalker
+            {
+                private readonly List<ISymbol> _safeToLogTargets = new List<ISymbol>();
+                private readonly List<ISymbol> _notSafeToLogTargets = new List<ISymbol>();
+                private readonly INamedTypeSymbol _safeToLogAttributeType;
+                private readonly INamedTypeSymbol _notSafeToLogAttributeType;
+                private readonly CancellationToken _cancellationToken;
+                private Compilation _compilation;
+
+                public SyntaxWalker(INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType, CancellationToken cancellationToken)
+                {
+                    _safeToLogAttributeType = safeToLogAttributeType;
+                    _notSafeToLogAttributeType = notSafeToLogAttributeType;
+                    _cancellationToken = cancellationToken;
+                }
+
+                public IReadOnlyList<ISymbol> SafeToLogTargets => _safeToLogTargets;
+                
+                public IReadOnlyList<ISymbol> NotSafeToLogTargets => _notSafeToLogTargets;
+
+                public void Visit(Compilation compilation)
+                {
+                    _compilation = compilation;
+                    foreach (var syntaxTree in compilation.SyntaxTrees)
+                        Visit(syntaxTree.GetRoot(_cancellationToken));
+                }
+
+                public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+                {
+                    if (node.Expression is MemberAccessExpressionSyntax memberAccess
+                        && memberAccess.Name is SimpleNameSyntax simpleName
+                        && simpleName.Identifier.Text == "Decorate"
+                        && _compilation.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
+                        && semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation)
+                    {
+                        if (SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _safeToLogAttributeType))
+                        {
+                            AddTarget(invocation, _safeToLogTargets);
+                        }
+                        else if (SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _notSafeToLogAttributeType))
+                        {
+                            AddTarget(invocation, _notSafeToLogTargets);
+                        }
+                    }
+
+                    base.VisitInvocationExpression(node);
+                }
+
+                private void AddTarget(IInvocationOperation invocation, IList<ISymbol> targets)
+                {
+                    if (invocation.TargetMethod.TypeArguments.Length > 0)
+                    {
+                        if (invocation.Arguments.Length == 0)
+                        {
+                            targets.Add(invocation.TargetMethod.TypeArguments[0]);
+                        }
+                        else if (invocation.Arguments[0].Value is IConversionOperation conversion
+                            && conversion.Operand is IAnonymousFunctionOperation anonymousFunction
+                            && anonymousFunction.Body is IBlockOperation block
+                            && block.Operations.Length == 1
+                            && block.Operations[0] is IReturnOperation returnOperation
+                            && returnOperation.ReturnedValue is IConversionOperation conversion2
+                            && conversion2.Operand is IPropertyReferenceOperation property)
+                        {
+                            targets.Add(property.Property);
+                        }
+                    }
+                    else if (invocation.Arguments[0].Parameter.Type.Name == "Type"
+                        && invocation.Arguments[0].Value is ITypeOfOperation typeOfOperation)
+                    {
+                        targets.Add(typeOfOperation.TypeOperand);
+                    }
+                }
+            }
         }
     }
 }

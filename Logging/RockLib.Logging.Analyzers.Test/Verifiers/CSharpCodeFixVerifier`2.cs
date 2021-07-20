@@ -16,15 +16,15 @@ namespace RockLib.Logging.Analyzers.Test
     {
         /// <inheritdoc cref="CodeFixVerifier{TAnalyzer, TCodeFix, TTest, TVerifier}.Diagnostic()"/>
         public static DiagnosticResult Diagnostic()
-            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, MSTestVerifier>.Diagnostic();
+            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, XUnitVerifier>.Diagnostic();
 
         /// <inheritdoc cref="CodeFixVerifier{TAnalyzer, TCodeFix, TTest, TVerifier}.Diagnostic(string)"/>
         public static DiagnosticResult Diagnostic(string diagnosticId)
-            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, MSTestVerifier>.Diagnostic(diagnosticId);
+            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, XUnitVerifier>.Diagnostic(diagnosticId);
 
         /// <inheritdoc cref="CodeFixVerifier{TAnalyzer, TCodeFix, TTest, TVerifier}.Diagnostic(DiagnosticDescriptor)"/>
         public static DiagnosticResult Diagnostic(DiagnosticDescriptor descriptor)
-            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, MSTestVerifier>.Diagnostic(descriptor);
+            => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, XUnitVerifier>.Diagnostic(descriptor);
 
         /// <inheritdoc cref="CodeFixVerifier{TAnalyzer, TCodeFix, TTest, TVerifier}.VerifyAnalyzerAsync(string, DiagnosticResult[])"/>
         public static async Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
@@ -34,7 +34,7 @@ namespace RockLib.Logging.Analyzers.Test
                 TestCode = source,
                 ReferenceAssemblies = ReferenceAssemblies.Default
                     .AddPackages(ImmutableArray.Create(
-                        new PackageIdentity("RockLib.Logging", "3.0.2")))
+                        new PackageIdentity("RockLib.Logging", "3.0.5")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
@@ -58,7 +58,7 @@ namespace RockLib.Logging.Analyzers.Test
                 FixedCode = fixedSource,
                 ReferenceAssemblies = ReferenceAssemblies.Default
                     .AddPackages(ImmutableArray.Create(
-                        new PackageIdentity("RockLib.Logging", "3.0.2")))
+                        new PackageIdentity("RockLib.Logging", "3.0.5")))
             };
 
             test.ExpectedDiagnostics.AddRange(expected);

@@ -79,6 +79,19 @@ public class Client
 }
 ```
 
+If you do not own the type that needs to be marked as safe to log, you can add `SafeToLogAttribute` to properties at runtime.
+
+```c#
+SafeToLogAttribute.Decorate<Client>(client => client.Name);
+```
+
+Alternatively, decorate the class with `SafeToLogAttribute` and exclude the unsafe properties by decorating them with `NotSafeToLogAttribute`:
+
+```c#
+SafeToLogAttribute.Decorate<Client>();
+NotSafeToLogAttribute.Decorate<Client>(client => client.SSN);
+```
+
 ## How to suppress violations
 
 ```c#

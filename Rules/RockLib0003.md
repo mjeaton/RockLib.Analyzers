@@ -91,6 +91,6 @@ public class Startup
 ## How to suppress violations
 
 ```c#
-#pragma warning disable RockLib0003// RockLibLoggerProvider has missing logger
-#pragma warning restore RockLib0003// RockLibLoggerProvider has missing logger
+#pragma warning disable RockLib0003 // RockLibLoggerProvider has missing logger
+#pragma warning restore RockLib0003 // RockLibLoggerProvider has missing logger
 ```

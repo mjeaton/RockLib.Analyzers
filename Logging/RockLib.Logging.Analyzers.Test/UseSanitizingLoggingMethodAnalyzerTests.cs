@@ -1,14 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Xunit;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
     RockLib.Logging.Analyzers.UseSanitizingLoggingMethodAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    [TestClass]
     public class UseSanitizingLoggingMethodAnalyzerTests
     {
-        [TestMethod("Diagnostrics are reported when setting extended property with a non-value type")]
+        [Fact(DisplayName = "Diagnostics are reported when setting extended property with a non-value type")]
         public async Task DiagnosticsReported()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
@@ -17,31 +16,31 @@ namespace RockLib.Logging.Analyzers.Test
                     shouldReportDiagnostic: true));
         }
 
-        [DataTestMethod]
-        [DataRow("string", DisplayName = "No diagnostics are reported for extended properties of type string")]
-        [DataRow("bool", DisplayName = "No diagnostics are reported for extended properties of type bool")]
-        [DataRow("char", DisplayName = "No diagnostics are reported for extended properties of type char")]
-        [DataRow("short", DisplayName = "No diagnostics are reported for extended properties of type short")]
-        [DataRow("int", DisplayName = "No diagnostics are reported for extended properties of type int")]
-        [DataRow("long", DisplayName = "No diagnostics are reported for extended properties of type long")]
-        [DataRow("ushort", DisplayName = "No diagnostics are reported for extended properties of type ushort")]
-        [DataRow("uint", DisplayName = "No diagnostics are reported for extended properties of type uint")]
-        [DataRow("ulong", DisplayName = "No diagnostics are reported for extended properties of type ulong")]
-        [DataRow("byte", DisplayName = "No diagnostics are reported for extended properties of type byte")]
-        [DataRow("sbyte", DisplayName = "No diagnostics are reported for extended properties of type sbyte")]
-        [DataRow("float", DisplayName = "No diagnostics are reported for extended properties of type float")]
-        [DataRow("double", DisplayName = "No diagnostics are reported for extended properties of type double")]
-        [DataRow("decimal", DisplayName = "No diagnostics are reported for extended properties of type decimal")]
-        [DataRow("DateTime", DisplayName = "No diagnostics are reported for extended properties of type DateTime")]
-        [DataRow("IntPtr", DisplayName = "No diagnostics are reported for extended properties of type IntPtr")]
-        [DataRow("UIntPtr", DisplayName = "No diagnostics are reported for extended properties of type UIntPtr")]
-        [DataRow("TimeSpan", DisplayName = "No diagnostics are reported for extended properties of type TimeSpan")]
-        [DataRow("DateTimeOffset", DisplayName = "No diagnostics are reported for extended properties of type DateTimeOffset")]
-        [DataRow("Guid", DisplayName = "No diagnostics are reported for extended properties of type Guid")]
-        [DataRow("Uri", DisplayName = "No diagnostics are reported for extended properties of type Uri")]
-        [DataRow("System.Text.Encoding", DisplayName = "No diagnostics are reported for extended properties of type Encoding")]
-        [DataRow("Type", DisplayName = "No diagnostics are reported for extended properties of type Type")]
-        [DataRow("TypeCode", DisplayName = "No diagnostics are reported for extended properties of an enum type")]
+        [Theory(DisplayName = "No diagnostics are reported for extended properties of specified type")]
+        [InlineData("string")]
+        [InlineData("bool")]
+        [InlineData("char")]
+        [InlineData("short")]
+        [InlineData("int")]
+        [InlineData("long")]
+        [InlineData("ushort")]
+        [InlineData("uint")]
+        [InlineData("ulong")]
+        [InlineData("byte")]
+        [InlineData("sbyte")]
+        [InlineData("float")]
+        [InlineData("double")]
+        [InlineData("decimal")]
+        [InlineData("DateTime")]
+        [InlineData("IntPtr")]
+        [InlineData("UIntPtr")]
+        [InlineData("TimeSpan")]
+        [InlineData("DateTimeOffset")]
+        [InlineData("Guid")]
+        [InlineData("Uri")]
+        [InlineData("System.Text.Encoding")]
+        [InlineData("Type")]
+        [InlineData("TypeCode")]
         public async Task NoDiagnosticsReported(string extendedPropertyType)
         {
             await RockLibVerifier.VerifyAnalyzerAsync(
