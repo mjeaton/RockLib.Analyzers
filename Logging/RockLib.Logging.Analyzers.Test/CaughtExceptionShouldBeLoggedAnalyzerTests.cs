@@ -61,8 +61,15 @@ public class Test
         }
         catch (Exception ex)
         {
-            var logEntry = new LogEntry(""A log without exception"", LogLevel.Info);
-            [|logger.Log(logEntry)|];
+            var logEntry1 = new LogEntry(""A log without exception"", LogLevel.Info);
+            [|logger.Log(logEntry1)|];
+
+            var logEntry2 = new LogEntry
+            {
+                Message = ""A log without exception"",
+                Level = LogLevel.Info
+            };
+            [|logger.Log(logEntry2)|];
         }
     }
 }");
@@ -122,8 +129,16 @@ public class Test
         }
         catch (Exception ex)
         {
-            var logEntry = new LogEntry(""A log with null exception"", null, LogLevel.Info);
-            [|logger.Log(logEntry)|];
+            var logEntry1 = new LogEntry(""A log with null exception"", null, LogLevel.Info);
+            [|logger.Log(logEntry1)|];
+
+            var logEntry2 = new LogEntry
+            {
+                Message = ""A log without exception"",
+                Level = LogLevel.Info,
+                Exception = null
+            };
+            [|logger.Log(logEntry2)|];
         }
     }
 }");
@@ -185,8 +200,16 @@ public class Test
         }
         catch (Exception ex)
         {
-            var logEntry = new LogEntry(""A log with some other exception"", someOtherException, LogLevel.Info);
-            [|logger.Log(logEntry)|];
+            var logEntry1 = new LogEntry(""A log with some other exception"", someOtherException, LogLevel.Info);
+            [|logger.Log(logEntry1)|];
+
+            var logEntry2 = new LogEntry
+            {
+                Message = ""A log without exception"",
+                Level = LogLevel.Info,
+                Exception = someOtherException
+            };
+            [|logger.Log(logEntry2)|];
         }
     }
 }");

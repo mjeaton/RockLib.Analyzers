@@ -174,14 +174,13 @@ namespace RockLib.Logging.Analyzers
                 if (logEntryCreation.Arguments.Length > 0)
                 {
                     var exceptionArgument = logEntryCreation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                    if (exceptionArgument != null && !exceptionArgument.IsImplicit)
+                    if (exceptionArgument != null
+                        && !exceptionArgument.IsImplicit
+                        && exceptionArgument.Value is ILocalReferenceOperation localReference
+                        && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
+                        && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
                     {
-                        if (exceptionArgument.Value is ILocalReferenceOperation localReference
-                            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                            && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
                 }
 
@@ -191,14 +190,12 @@ namespace RockLib.Logging.Analyzers
                     {
                         if (initializer is ISimpleAssignmentOperation assignment
                             && assignment.Target is IPropertyReferenceOperation property
-                            && property.Property.Name == "Exception")
+                            && property.Property.Name == "Exception"
+                            && assignment.Value is ILocalReferenceOperation localReference
+                            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
+                            && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
                         {
-                            if (assignment.Value is ILocalReferenceOperation localReference
-                                && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                                && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
