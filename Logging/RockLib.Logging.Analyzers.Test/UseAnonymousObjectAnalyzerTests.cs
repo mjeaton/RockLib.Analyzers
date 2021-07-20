@@ -1,23 +1,21 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using System.Threading.Tasks;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
 	 RockLib.Logging.Analyzers.AnonymousObjectAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-	[TestClass]
 	public class UseAnonymousObjectAnalyzerTests
 	{
-		[TestMethod("Diagnostics are reported when logging with a non-anon type")]
+		[Fact(DisplayName = "Diagnostics are reported when logging with a non-anon type")]
 		public async Task Should_report_anonymous_object_during_sanitized_log()
 		{
 			await RockLibVerifier.VerifyAnalyzerAsync(
-				GetTestCode(
-					extendedPropertyType: "ReportAnonObjectPreventionTestClass",					
+				GetTestCode(					
 					shouldReportDiagnostic: true));
 		}
 
-		private static string GetTestCode(string extendedPropertyType, bool shouldReportDiagnostic)
+		private static string GetTestCode(bool shouldReportDiagnostic)
 		{
 			string openDiagnostic = shouldReportDiagnostic ? "[|" : null;
 			string closeDiagnostic = shouldReportDiagnostic ? "|]" : null;
