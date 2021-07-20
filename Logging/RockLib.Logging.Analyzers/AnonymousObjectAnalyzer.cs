@@ -14,8 +14,8 @@ namespace RockLib.Logging.Analyzers
 	public class AnonymousObjectAnalyzer : DiagnosticAnalyzer
 	{
 		private static readonly LocalizableString _title = "Use anonymous object in logging methods";
-		private static readonly LocalizableString _messageFormat = "Use anonymous objects as extended property when calling logging methods";
-		private static readonly LocalizableString _description = "It is recommended to use anonymous objects when calling logging methods.";
+		private static readonly LocalizableString _messageFormat = "Use anonymous objects as extended property when calling logging methods and the LogEntry constructor";
+		private static readonly LocalizableString _description = "It is recommended to use anonymous objects when calling logging methods and the LogEntry constructor.";
 
 		public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
 			 DiagnosticIds.UseAnonymousObject,
@@ -50,22 +50,41 @@ namespace RockLib.Logging.Analyzers
 			if (loggerType == null)
 				return;
 
-			var analyzer = new OperationAnalyzer(loggerType, loggingExtensionsType, safeLoggingExtensionsType);
+			var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
+			if (logEntryType == null)
+				return;
+
+			var analyzer = new OperationAnalyzer(loggerType, logEntryType, loggingExtensionsType, safeLoggingExtensionsType);
 
 			context.RegisterOperationAction(analyzer.AnalyzeInvocation, OperationKind.Invocation);
+			context.RegisterOperationAction(analyzer.AnalyzeObjectCreation, OperationKind.ObjectCreation);
 		}
 
 		private class OperationAnalyzer
 		{
 			private readonly INamedTypeSymbol _loggerType;
+			private readonly INamedTypeSymbol _logEntryType;
 			private readonly INamedTypeSymbol _loggingExtensionsType;
 			private readonly INamedTypeSymbol _safeLoggingExtensionsType;
 
-			public OperationAnalyzer(INamedTypeSymbol loggerType, INamedTypeSymbol loggingExtensionsType, INamedTypeSymbol safeLoggingExtensionsType)
+			public OperationAnalyzer(INamedTypeSymbol loggerType, 
+												INamedTypeSymbol logEntryType, 
+												INamedTypeSymbol loggingExtensionsType, 
+												INamedTypeSymbol safeLoggingExtensionsType)
 			{
 				_loggerType = loggerType;
+				_logEntryType = logEntryType;
 				_loggingExtensionsType = loggingExtensionsType;
 				_safeLoggingExtensionsType = safeLoggingExtensionsType;
+			}
+
+			public void AnalyzeObjectCreation(OperationAnalysisContext context)
+			{
+				var objectCreationOperation = (IObjectCreationOperation)context.Operation;
+				if (SymbolEqualityComparer.Default.Equals(objectCreationOperation.Type, _logEntryType))
+				{
+					AnalyzeExtendedPropertiesArgument(objectCreationOperation.Arguments, context.ReportDiagnostic, objectCreationOperation.Syntax);
+				}
 			}
 
 			public void AnalyzeInvocation(OperationAnalysisContext context)
@@ -76,11 +95,7 @@ namespace RockLib.Logging.Analyzers
 				if (methodSymbol.MethodKind != MethodKind.Ordinary)
 					return;
 
-				if(methodSymbol.Name == "Log")
-				{
-					//TODO: Check the LogEntry ctor to ensure an anonymous object is provided
-				}
-				else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType)
+				if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType)
 						|| SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
 						|| SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
 				{
@@ -97,9 +112,9 @@ namespace RockLib.Logging.Analyzers
 						  || !(extendedPropertiesArgument.Value is IConversionOperation convertToObjectType)
 						  || convertToObjectType.Type.SpecialType != SpecialType.System_Object)
 					return;
-				 
+
 				var extendedPropertiesArgumentValue = convertToObjectType.Operand;
-				
+
 				//Dictionaries are allowed
 				var isDictionary = extendedPropertiesArgumentValue.Type
 					.AllInterfaces
