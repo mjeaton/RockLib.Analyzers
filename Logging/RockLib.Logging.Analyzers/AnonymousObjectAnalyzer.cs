@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -12,12 +13,12 @@ namespace RockLib.Logging.Analyzers
 	[DiagnosticAnalyzer(LanguageNames.CSharp)]
 	public class AnonymousObjectAnalyzer : DiagnosticAnalyzer
 	{
-		private static readonly LocalizableString _title = "Use anonymous object in sanitizing methods";
-		private static readonly LocalizableString _messageFormat = "Use anonymous objects as extended property when calling sanitizing methods";
-		private static readonly LocalizableString _description = "It is recommended to use anonymous objects when calling sanitizing methods.";
+		private static readonly LocalizableString _title = "Use anonymous object in logging methods";
+		private static readonly LocalizableString _messageFormat = "Use anonymous objects as extended property when calling logging methods";
+		private static readonly LocalizableString _description = "It is recommended to use anonymous objects when calling logging methods.";
 
 		public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-			 DiagnosticIds.UseSanitizingLoggingMethod,
+			 DiagnosticIds.UseAnonymousObject,
 			 _title,
 			 _messageFormat,
 			 DiagnosticCategory.Usage,
@@ -37,28 +38,34 @@ namespace RockLib.Logging.Analyzers
 
 		private static void OnCompilationStart(CompilationStartAnalysisContext context)
 		{
-			var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
-			if (logEntryType == null)
-				return;
-
 			var loggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LoggingExtensions");
 			if (loggingExtensionsType == null)
 				return;
 
-			var analyzer = new OperationAnalyzer(logEntryType, loggingExtensionsType);
+			var safeLoggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
+			if (safeLoggingExtensionsType == null)
+				return;
+
+			var loggerType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.ILogger");
+			if (loggerType == null)
+				return;
+
+			var analyzer = new OperationAnalyzer(loggerType, loggingExtensionsType, safeLoggingExtensionsType);
 
 			context.RegisterOperationAction(analyzer.AnalyzeInvocation, OperationKind.Invocation);
 		}
 
 		private class OperationAnalyzer
 		{
-			private readonly INamedTypeSymbol _logEntryType;
+			private readonly INamedTypeSymbol _loggerType;
 			private readonly INamedTypeSymbol _loggingExtensionsType;
+			private readonly INamedTypeSymbol _safeLoggingExtensionsType;
 
-			public OperationAnalyzer(INamedTypeSymbol logEntryType, INamedTypeSymbol loggingExtensionsType)
+			public OperationAnalyzer(INamedTypeSymbol loggerType, INamedTypeSymbol loggingExtensionsType, INamedTypeSymbol safeLoggingExtensionsType)
 			{
-				_logEntryType = logEntryType;
+				_loggerType = loggerType;
 				_loggingExtensionsType = loggingExtensionsType;
+				_safeLoggingExtensionsType = safeLoggingExtensionsType;
 			}
 
 			public void AnalyzeInvocation(OperationAnalysisContext context)
@@ -69,15 +76,20 @@ namespace RockLib.Logging.Analyzers
 				if (methodSymbol.MethodKind != MethodKind.Ordinary)
 					return;
 
-				if (methodSymbol.Name.Contains("Sanitized"))
+				if(methodSymbol.Name == "Log")
 				{
-					AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic,
-				 invocationOperation.Syntax, "'ILogger." + methodSymbol.Name, "'ILogger." + methodSymbol.Name + "'");
-				}			
+					//TODO: Check the LogEntry ctor to ensure an anonymous object is provided
+				}
+				else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType)
+						|| SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
+						|| SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
+				{
+					AnalyzeExtendedPropertiesArgument(invocationOperation.Arguments, context.ReportDiagnostic, invocationOperation.Syntax);
+				}
 			}
 
 			private void AnalyzeExtendedPropertiesArgument(IEnumerable<IArgumentOperation> arguments,
-				 Action<Diagnostic> reportDiagnostic, SyntaxNode reportingNode, string recommendedFormat, string notRecommendedFormat)
+				 Action<Diagnostic> reportDiagnostic, SyntaxNode reportingNode)
 			{
 				var extendedPropertiesArgument = arguments.FirstOrDefault(argument => argument.Parameter.Name == "extendedProperties");
 
@@ -85,13 +97,18 @@ namespace RockLib.Logging.Analyzers
 						  || !(extendedPropertiesArgument.Value is IConversionOperation convertToObjectType)
 						  || convertToObjectType.Type.SpecialType != SpecialType.System_Object)
 					return;
-
+				 
 				var extendedPropertiesArgumentValue = convertToObjectType.Operand;
+				
+				//Dictionaries are allowed
+				var isDictionary = extendedPropertiesArgumentValue.Type
+					.AllInterfaces
+					.Any(x => x.MetadataName == typeof(IDictionary).Name);
 
-				if (!extendedPropertiesArgumentValue.Type.IsAnonymousType)
+				if (!extendedPropertiesArgumentValue.Type.IsAnonymousType
+					&& !isDictionary)
 				{
-					var diagnostic = Diagnostic.Create(Rule, reportingNode.GetLocation(),
-						 recommendedFormat, notRecommendedFormat);
+					var diagnostic = Diagnostic.Create(Rule, reportingNode.GetLocation());
 					reportDiagnostic(diagnostic);
 				}
 			}
