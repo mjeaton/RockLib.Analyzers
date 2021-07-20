@@ -87,7 +87,7 @@ namespace RockLib.Logging.Analyzers
                     && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType))
                 {
                     var logEntryArgument = invocationOperation.Arguments[0];
-                    var logEntryCreation = GetLogEntryCreationOperation(logEntryArgument);
+                    var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
 
                     if (logEntryCreation == null
                         || IsExceptionSet(logEntryCreation, logEntryArgument.Value, catchClause))
@@ -132,37 +132,6 @@ namespace RockLib.Logging.Analyzers
                 }
 
                 return false;
-            }
-
-            private IObjectCreationOperation GetLogEntryCreationOperation(IArgumentOperation logEntryArgument)
-            {
-                if (logEntryArgument.Value is IObjectCreationOperation objectCreation)
-                    return objectCreation;
-
-                if (logEntryArgument.Value is ILocalReferenceOperation localReference)
-                {
-                    var semanticModel = localReference.SemanticModel;
-                    var dataflow = semanticModel.AnalyzeDataFlow(localReference.Syntax);
-
-                    return dataflow.DataFlowsIn
-                        .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetObjectCreationOperation))
-                        .FirstOrDefault(operation => operation != null);
-
-                    IObjectCreationOperation GetObjectCreationOperation(SyntaxReference syntaxReference)
-                    {
-                        var syntax = syntaxReference.GetSyntax();
-
-                        if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
-                            && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
-                        {
-                            return variableInitializerOperation.Value as IObjectCreationOperation;
-                        }
-
-                        return null;
-                    }
-                }
-
-                return null;
             }
 
             private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
