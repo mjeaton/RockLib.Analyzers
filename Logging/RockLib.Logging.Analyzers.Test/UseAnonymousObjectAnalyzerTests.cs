@@ -35,10 +35,10 @@ public class ReportAnonObjectPreventionTestClass
 	public void Log_Sanitized(       
         ILogger logger)
 	{{
-		{0}logger.DebugSanitized(""WE DA BEST MESSAGE"", new Derp(){{ Value = ""florp"" }}){1};
-		{0}logger.WarnSanitized(""WE DA BEST MESSAGE"", new Derp(){{ Value = ""florp"" }}){1};
-		{0}logger.InfoSanitized(""WE DA BEST MESSAGE"", new Derp(){{ Value = ""florp"" }}){1};
-		{0}logger.ErrorSanitized(""WE DA BEST MESSAGE"", new Derp(){{ Value = ""florp"" }}){1};
+		{0}logger.DebugSanitized(""Debug Message"", new Derp(){{ Value = ""florp"" }}){1};
+		{0}logger.WarnSanitized(""Warn Message"", new Derp(){{ Value = ""florp"" }}){1};
+		{0}logger.InfoSanitized(""Info Message"", new Derp(){{ Value = ""florp"" }}){1};
+		{0}logger.ErrorSanitized(""Error Message"", new Derp(){{ Value = ""florp"" }}){1};
 	}}
 }}", openDiagnostic, closeDiagnostic);
 		}
