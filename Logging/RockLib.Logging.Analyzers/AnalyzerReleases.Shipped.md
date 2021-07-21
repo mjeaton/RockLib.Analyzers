@@ -14,3 +14,13 @@ RockLib0001 | Usage | Warning | UseSanitizingLoggingMethodAnalyzer, [Documentati
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 RockLib0005 | Usage | Warning | NoLogLevelSpecifiedAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0005.md)
+
+## Release 1.0.2
+
+
+### New Rules
+
+Rule ID | Category | Severity | Notes
+--------|----------|----------|-------
+RockLib0006 | Usage | Warning | CaughtExceptionShouldBeLoggedAnalyzer
+RockLib0007 | Usage | Warning | UnexpectedExtendedPropertiesObjectAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0007.md)
