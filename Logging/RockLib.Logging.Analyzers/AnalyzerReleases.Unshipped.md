@@ -3,4 +3,5 @@
 ### New Rules
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
+RockLib0006 | Usage | Warning | CaughtExceptionShouldBeLoggedAnalyzer
 RockLib0007 | Usage | Warning | AnonymousObjectAnalyzer

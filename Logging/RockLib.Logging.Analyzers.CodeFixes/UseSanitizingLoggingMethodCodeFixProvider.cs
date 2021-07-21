@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System.Collections.Immutable;
@@ -148,9 +149,12 @@ namespace RockLib.Logging.Analyzers
                         SyntaxFactory.IdentifierName("Logging")),
                     SyntaxFactory.IdentifierName("SafeLogging"));
                 root = compilationUnit.AddUsings(SyntaxFactory.UsingDirective(name));
+                return await Formatter.OrganizeImportsAsync(document.WithSyntaxRoot(root), cancellationToken);
             }
-
-            return document.WithSyntaxRoot(root);
+            else
+            {
+                return document.WithSyntaxRoot(root);
+            }
         }
 
         private static async Task<Document> ReplaceExtendedPropertiesParameterWithCallToSetSanitizedExtendedPropertiesMethod(

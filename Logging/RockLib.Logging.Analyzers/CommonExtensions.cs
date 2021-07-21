@@ -8,8 +8,39 @@ using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
-    internal static class CommonExtensions
+    public static class CommonExtensions
     {
+        public static IObjectCreationOperation GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)
+        {
+            if (logEntryArgument.Value is IObjectCreationOperation objectCreation)
+                return objectCreation;
+
+            if (logEntryArgument.Value is ILocalReferenceOperation localReference)
+            {
+                var semanticModel = localReference.SemanticModel;
+                var dataflow = semanticModel.AnalyzeDataFlow(localReference.Syntax);
+
+                return dataflow.DataFlowsIn
+                    .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetObjectCreationOperation))
+                    .FirstOrDefault(operation => operation != null);
+
+                IObjectCreationOperation GetObjectCreationOperation(SyntaxReference syntaxReference)
+                {
+                    var syntax = syntaxReference.GetSyntax();
+
+                    if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
+                        && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
+                    {
+                        return variableInitializerOperation.Value as IObjectCreationOperation;
+                    }
+
+                    return null;
+                }
+            }
+
+            return null;
+        }
+
         public static bool TryGetAnonymousObjectCreationOperation(this IOperation extendedPropertiesArgumentValue,
                 out IAnonymousObjectCreationOperation anonymousObjectCreationOperation)
         {
