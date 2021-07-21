@@ -11,21 +11,21 @@ using System.Linq;
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class AnonymousObjectAnalyzer : DiagnosticAnalyzer
+    public class UnexpectedExtendedPropertiesObjectAnalyzer : DiagnosticAnalyzer
     {
-        private static readonly LocalizableString _title = "Use anonymous object in logging methods";
-        private static readonly LocalizableString _messageFormat = "Use anonymous objects as extended property when calling logging methods and the LogEntry constructor";
-        private static readonly LocalizableString _description = "It is recommended to use anonymous objects when calling logging methods and the LogEntry constructor.";
+        private static readonly LocalizableString _title = "Unexpected extended properties object";
+        private static readonly LocalizableString _messageFormat = "Unexpected type '{0}' used for extended properties";
+        private static readonly LocalizableString _description = "An anonymous object or a string dictionary should be used as the value for extended properties.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-             DiagnosticIds.UseAnonymousObject,
+             DiagnosticIds.UnexpectedExtendedPropertiesObject,
              _title,
              _messageFormat,
              DiagnosticCategory.Usage,
              DiagnosticSeverity.Warning,
              isEnabledByDefault: true,
              description: _description,
-             helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.UseAnonymousObject));
+             helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.UnexpectedExtendedPropertiesObject));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 

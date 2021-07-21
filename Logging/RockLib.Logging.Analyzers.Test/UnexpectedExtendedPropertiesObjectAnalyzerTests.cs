@@ -1,12 +1,12 @@
 ﻿using Xunit;
 using System.Threading.Tasks;
 using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
-	 RockLib.Logging.Analyzers.AnonymousObjectAnalyzer>;
+	 RockLib.Logging.Analyzers.UnexpectedExtendedPropertiesObjectAnalyzer>;
 
 
 namespace RockLib.Logging.Analyzers.Test
 {
-	public class UseAnonymousObjectAnalyzerTests
+	public class UnexpectedExtendedPropertiesObjectAnalyzerTests
 	{
 		[Fact(DisplayName = "Diagnostics are reported when logging with a non-anon type")]
 		public async Task DiagnosticReported1()
