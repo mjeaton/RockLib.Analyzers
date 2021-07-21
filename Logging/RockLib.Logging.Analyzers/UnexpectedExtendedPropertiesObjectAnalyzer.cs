@@ -115,17 +115,20 @@ namespace RockLib.Logging.Analyzers
 
                 var extendedPropertiesArgumentValue = convertToObjectType.Operand;
 
-                //Dictionaries are allowed
-                var isDictionary = extendedPropertiesArgumentValue.Type
-                    .AllInterfaces
-                    .Any(x => x.MetadataName == typeof(IDictionary).Name);
-
                 if (!extendedPropertiesArgumentValue.Type.IsAnonymousType
-                    && !isDictionary)
+                    && !IsValidDictionary(extendedPropertiesArgumentValue.Type))
                 {
                     var diagnostic = Diagnostic.Create(Rule, reportingNode.GetLocation());
                     reportDiagnostic(diagnostic);
                 }
+            }
+
+            private bool IsValidDictionary(ITypeSymbol type)
+            {
+                // TODO: Reduce false positives (we should only match if it implements IEnumerable<KeyValuePair<string, T>> or IDictionary)
+                return type
+                    .AllInterfaces
+                    .Any(x => x.MetadataName == typeof(IDictionary).Name);
             }
         }
     }
