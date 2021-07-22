@@ -1,56 +1,50 @@
-# RockLib0007: Use anonymous object in logging methods
+# RockLib0007: Unexpected extended properties object
 
 ## Cause
 
-This rule fires when a non-anonymous object is passed as the `extendedProperties` argument for all logging methods on `ILogger` as well as the constructor for `LogEntry` 
+This rule fires when an object of an unexpected type is passed as the `extendedProperties` argument for logging methods. The expected types are anonymous objects and string dictionaries; all other types are deemed unexpected.
 
 ## Reason for rule
 
-Serialization rules may differ from object to object and may not log all properties correctly.
+Extended properties are intended to be a set of key/value pairs where the values are data from the application. When an object of an unexpected type is passed to a logging method, its public properties become the key/value pairs of the extended properties, which is likely not what the developer intended.
 
 ## How to fix violations
 
-To fix a violation of this rule, apply the appropriate code fix:
-
-- Pass anonymous objects in all `ILogger` log methods `extendedProperties` argument.
-- Pass anonymous objects in the `LogEntry` constructor's `extendedProperties` argument.
+To fix a violation of this rule, instead passing the unexpected object directly as the `extendedProperties` argument, pass a new anonymous object with a property set to the object.
 
 ## Examples
 
 ### Violates
 
 ```c#
-public void Example(ILogger logger)
-{    
-    // log method
-    logger.DebugSanitized("message", new Thing());
-
-    // creating a LogEntry
-    var entry = new LogEntry("message", extendedProperties: new Thing());
+public void Example(Foo foo)
+{
+    _logger.Info("Some message", foo);
 }
 ```
 
 ### Does Not Violate
-```c#
-public void Example(ILogger logger)
-{    
-    // Writing an Info log
-    // In this example, Thing() must be decorated with the SafeToLog attribute
-    logger.InfoSanitized("message", new { Value = new Thing() });
 
-    // Creating a LogEntry
-    var entry = new LogEntry("message", extendedProperties: new { Value = "someValue" };
-    
-    // Creating a LogEntry with an object as extendedProperties
-    // Remember, the object being logged, must have the SafeToLog attribute
-    var entry2 = new LogEntry("message");
-    entry2.SetSanitizedExtendedProperty("Value", new Thing());
+```c#
+public void Example(Foo foo)
+{
+    _logger.Info("Some message", new { foo });
+}
+```
+
+The `extendedProperties` argument can also be a string dictionary:
+
+```c#
+public void Example(Foo foo)
+{
+    Dictionary<string, object> extendedProperties = new() { ["foo"] = foo };
+    _logger.Info("Some message", extendedProperties);
 }
 ```
 
 ## How to suppress violations
 
 ```c#
-#pragma warning disable RockLib0007 // Use anonymous object in logging methods
-#pragma warning restore RockLib0007 // Use anonymous object in logging methods
+#pragma warning disable RockLib0007 // Unexpected extended properties object
+#pragma warning restore RockLib0007 // Unexpected extended properties object
 ```

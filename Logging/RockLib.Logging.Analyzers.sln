@@ -21,6 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\Rules\RockLib0000.md = ..\Rules\RockLib0000.md
 		..\Rules\RockLib0001.md = ..\Rules\RockLib0001.md
 		..\Rules\RockLib0005.md = ..\Rules\RockLib0005.md
+		..\Rules\RockLib0006.md = ..\Rules\RockLib0006.md
 		..\Rules\RockLib0007.md = ..\Rules\RockLib0007.md
 	EndProjectSection
 EndProject
