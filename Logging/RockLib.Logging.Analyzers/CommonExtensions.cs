@@ -16,27 +16,7 @@ namespace RockLib.Logging.Analyzers
                 return objectCreation;
 
             if (logEntryArgument.Value is ILocalReferenceOperation localReference)
-            {
-                var semanticModel = localReference.SemanticModel;
-                var dataflow = semanticModel.AnalyzeDataFlow(localReference.Syntax);
-
-                return dataflow.DataFlowsIn
-                    .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetObjectCreationOperation))
-                    .FirstOrDefault(operation => operation != null);
-
-                IObjectCreationOperation GetObjectCreationOperation(SyntaxReference syntaxReference)
-                {
-                    var syntax = syntaxReference.GetSyntax();
-
-                    if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
-                        && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
-                    {
-                        return variableInitializerOperation.Value as IObjectCreationOperation;
-                    }
-
-                    return null;
-                }
-            }
+                return Find<IObjectCreationOperation>.For(localReference);
 
             return null;
         }
@@ -53,26 +33,7 @@ namespace RockLib.Logging.Analyzers
                 if (anonymousObjectCreationOperation is null
                     && extendedPropertiesArgumentValue is ILocalReferenceOperation localReferenceOperation)
                 {
-                    var semanticModel = localReferenceOperation.SemanticModel;
-                    var dataflow = semanticModel.AnalyzeDataFlow(localReferenceOperation.Syntax);
-
-                    anonymousObjectCreationOperation =
-                        dataflow.DataFlowsIn
-                            .SelectMany(symbol => symbol.DeclaringSyntaxReferences.Select(GetAnonymousObjectCreationOperation))
-                            .FirstOrDefault(operation => operation != null);
-
-                    IAnonymousObjectCreationOperation GetAnonymousObjectCreationOperation(SyntaxReference syntaxReference)
-                    {
-                        var syntax = syntaxReference.GetSyntax();
-
-                        if (semanticModel.GetOperation(syntax) is IVariableDeclaratorOperation variableDeclaratorOperation
-                            && variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation)
-                        {
-                            return variableInitializerOperation.Value as IAnonymousObjectCreationOperation;
-                        }
-
-                        return null;
-                    }
+                    anonymousObjectCreationOperation = Find<IAnonymousObjectCreationOperation>.For(localReferenceOperation);
                 }
             }
 
@@ -280,6 +241,34 @@ namespace RockLib.Logging.Analyzers
                         }
                     }
                 }
+            }
+        }
+
+        private class Find<TOperation> : OperationWalker
+            where TOperation : IOperation
+        {
+            private readonly ILocalSymbol _localSymbol;
+            private TOperation _foundOperation;
+
+            private Find(ILocalSymbol localSymbol) => _localSymbol = localSymbol;
+
+            public static TOperation For(ILocalReferenceOperation localReferenceOperation)
+            {
+                var operationWalker = new Find<TOperation>(localReferenceOperation.Local);
+                operationWalker.Visit(localReferenceOperation.GetRootOperation());
+                return operationWalker._foundOperation;
+            }
+
+            public override void VisitVariableDeclarator(IVariableDeclaratorOperation variableDeclaratorOperation)
+            {
+                if (variableDeclaratorOperation.Initializer is IVariableInitializerOperation variableInitializerOperation
+                    && SymbolEqualityComparer.Default.Equals(_localSymbol, variableDeclaratorOperation.Symbol)
+                    && variableInitializerOperation.Value is TOperation operation)
+                {
+                    _foundOperation = operation;
+                }
+
+                base.VisitVariableDeclarator(variableDeclaratorOperation);
             }
         }
     }
