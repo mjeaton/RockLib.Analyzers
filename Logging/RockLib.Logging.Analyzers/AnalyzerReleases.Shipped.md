@@ -22,5 +22,5 @@ RockLib0005 | Usage | Warning | NoLogLevelSpecifiedAnalyzer, [Documentation](htt
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-RockLib0006 | Usage | Warning | CaughtExceptionShouldBeLoggedAnalyzer
+RockLib0006 | Usage | Warning | CaughtExceptionShouldBeLoggedAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0006.md)
 RockLib0007 | Usage | Warning | UnexpectedExtendedPropertiesObjectAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0007.md)
