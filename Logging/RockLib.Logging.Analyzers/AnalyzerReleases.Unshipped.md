@@ -4,3 +4,4 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 RockLib0008 | Usage | Warning | NoLogMessageSpecifiedAnalyzer
+RockLib0009 | Usage | Warning | LoggerHasNoLogProvidersAnalyzer
