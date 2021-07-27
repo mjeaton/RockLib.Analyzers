@@ -53,8 +53,8 @@ namespace Example.Logging.AspNetCore
 }");
         }
 
-        [Fact(DisplayName = null)]
-        public async Task DiagnosticsReported2()
+        [Fact(DisplayName = "Do diagnostics are reported when a log provider is defined in appsettings.json")]
+        public async Task NoDiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using Microsoft.Extensions.DependencyInjection;
@@ -67,18 +67,14 @@ namespace Example.Logging.AspNetCore
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            [|services.AddLogger()|];
-        }
-
-        private class MyContextProvider : IContextProvider
-        {
-            public void AddContext(LogEntry logEntry)
-            {
-            }
+            services.AddLogger();
         }
     }
 }", ("appsettings.json", @"{
-  ""foo"": 123
+  ""RockLib.Logging"": {
+    ""Level"": ""Warn"",
+    ""LogProviders"": { ""Type"": ""RockLib.Logging.ConsoleLogProvider, RockLib.Logging"" }
+  }
 }"));
         }
     }

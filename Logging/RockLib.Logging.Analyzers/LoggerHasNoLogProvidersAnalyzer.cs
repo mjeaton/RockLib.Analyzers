@@ -1,15 +1,13 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
-using Microsoft.CodeAnalysis.Text;
 using RockLib.Analyzers.Common;
+using RockLib.Analyzers.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Threading;
 
 namespace RockLib.Logging.Analyzers
 {
@@ -17,8 +15,8 @@ namespace RockLib.Logging.Analyzers
     public class LoggerHasNoLogProvidersAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Logger has no log providers";
-        private static readonly LocalizableString _messageFormat = "";
-        private static readonly LocalizableString _description = "";
+        private static readonly LocalizableString _messageFormat = "Logger has no log providers";
+        private static readonly LocalizableString _description = "Logger has no log providers.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticIds.LoggerHasNoLogProviders,
@@ -34,6 +32,10 @@ namespace RockLib.Logging.Analyzers
 
         public override void Initialize(AnalysisContext context)
         {
+            context.
+
+            File.AppendAllText("C:\\Temp\\AnalyzerLog.txt", "In Initialize...\n");
+
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -87,7 +89,7 @@ namespace RockLib.Logging.Analyzers
 
                 if (loggerBuilderInvocations.Any(invocation => invocation.TargetMethod.Name.Contains("LogProvider")))
                     return;
-                new /*wtf*/ LoggerHasNoLogProvidersAnalyzer ( ) ;
+
                 if (loggerBuilderInvocations.Any(invocation => invocation.TargetMethod.Name.Contains("ContextProvider"))
                     || IsLevelOrIsDisabledSet.For(invocationOperation, _iloggerOptionsType))
                 {
@@ -99,17 +101,72 @@ namespace RockLib.Logging.Analyzers
                 // The AddLogger() call has been determined to be "empty". Need to look in appsettings.json (and maybe
                 // launch.json (for VS - need to determine files for VSCode and Rider) for environment variables).
 
+                if (IsLogProviderDefinedInAppsettingsJson(context))
+                    return;
+
+                var d = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation());
+                context.ReportDiagnostic(d);
+                return;
+            }
+
+            private bool IsLogProviderDefinedInAppsettingsJson(OperationAnalysisContext context)
+            {
                 if (GetAppsettingsJson(context) is string appsettingsJson)
                 {
-                    // Ok, now what?
+                    try
+                    {
+                        if (JsonDocument.Parse(appsettingsJson) is ObjectSyntax rootObject
+                            && rootObject.TryGetMemberValue("RockLib.Logging", "RockLib_Logging", out var loggingNode)
+                            && loggingNode is ObjectSyntax loggingObject
+                            && loggingObject.TryGetMemberValue("LogProviders", "Providers", out var logProvidersNode))
+                        {
+                            if (logProvidersNode is ObjectSyntax logProvidersObject)
+                            {
+                                if (IsValidTypeSpecifiedObject(logProvidersObject, context.Compilation))
+                                    return true;
+                            }
+                            else if (logProvidersNode is ArraySyntax logProvidersArray)
+                            {
+                                foreach (var logProviderObject in logProvidersArray.GetItemValues().OfType<ObjectSyntax>())
+                                    if (IsValidTypeSpecifiedObject(logProviderObject, context.Compilation))
+                                        return true;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // TODO: Something?
+                    }
                 }
+
+                return false;
+            }
+
+            private bool IsValidTypeSpecifiedObject(ObjectSyntax objectSyntax, Compilation compilation)
+            {
+                if (objectSyntax.TryGetMemberValue("Type", out var typeNode)
+                    && typeNode is StringSyntax typeString
+                    && typeString.IsValid)
+                {
+                    var typeParts = typeString.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (typeParts.Length > 0
+                        && compilation.GetTypeByMetadataName(typeParts[0].Trim()) != null)
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             private static string GetAppsettingsJson(OperationAnalysisContext context)
             {
+                File.AppendAllText("C:\\Temp\\AnalyzerLog.txt", "In GetAppsettingsJson...\n");
+
                 foreach (AdditionalText text in context.Options.AdditionalFiles)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
+
+                    File.AppendAllText("C:\\Temp\\AnalyzerLog.txt", text.Path + '\n');
 
                     string fileName = Path.GetFileName(text.Path);
                     if (fileName.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase))

@@ -5,6 +5,8 @@ using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System.Collections.Generic;
 using System.Linq;
+using RockLib.Analyzers.Json;
+using System;
 
 namespace RockLib.Logging.Analyzers
 {
@@ -13,6 +15,66 @@ namespace RockLib.Logging.Analyzers
         public static bool IsException(this ITypeSymbol typeSymbol, ITypeSymbol exceptionType, Compilation compilation)
         {
             return compilation.ClassifyCommonConversion(typeSymbol, exceptionType).IsImplicit;
+        }
+
+        public static bool TryGetMemberValue(this ObjectSyntax objectSyntax,
+            string memberName, out JsonSyntaxNode value)
+        {
+            if (objectSyntax != null
+                && objectSyntax.Members != null)
+            {
+                foreach (var member in objectSyntax.Members)
+                {
+                    if (member.Name != null && member.Name.IsValid && member.Value != null)
+                    {
+                        var name = member.Name.Value;
+                        if (string.Equals(name, memberName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            value = member.Value;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
+        public static bool TryGetMemberValue(this ObjectSyntax objectSyntax,
+            string memberName, string alternateMemberName, out JsonSyntaxNode value)
+        {
+            if (objectSyntax != null
+                && objectSyntax.Members != null)
+            {
+                foreach (var member in objectSyntax.Members)
+                {
+                    if (member.Name != null && member.Name.IsValid && member.Value != null)
+                    {
+                        var name = member.Name.Value;
+                        if (string.Equals(name, memberName, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(name, alternateMemberName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            value = member.Value;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
+        public static IEnumerable<JsonSyntaxNode> GetItemValues(this ArraySyntax arraySyntax)
+        {
+            if (arraySyntax != null
+                && arraySyntax.Items != null)
+            {
+                foreach (var item in arraySyntax.Items)
+                    if (item.Value != null)
+                        yield return item.Value;
+            }
         }
 
         public static IObjectCreationOperation GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)

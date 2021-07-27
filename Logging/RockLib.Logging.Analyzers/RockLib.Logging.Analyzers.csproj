@@ -18,4 +18,6 @@
 
   <Import Project="..\..\Common\RockLib.Analyzers.Common.projitems" Label="Shared" />
 
+  <Import Project="..\..\RockLib.Analyzers.Json\RockLib.Analyzers.Json\RockLib.Analyzers.Json.Shared.projitems" Label="Shared" />
+
 </Project>
