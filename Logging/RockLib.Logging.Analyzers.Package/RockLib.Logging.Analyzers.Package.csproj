@@ -13,12 +13,12 @@
     <Authors>RockLib</Authors>
     <PackageProjectUrl>https://github.com/RockLib/RockLib.Analyzers</PackageProjectUrl>
     <RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Roslyn analyzers for RockLib.Logging</Description>
     <PackageReleaseNotes>A changelog is available at https://github.com/RockLib/RockLib.Analyzers/blob/main/Logging/CHANGELOG.md.</PackageReleaseNotes>
-    <Copyright>Copyright 2021 (c) Quicken Loans Corporation. All rights reserved.</Copyright>
+    <Copyright>Copyright 2021 (c) Rocket Mortgage. All rights reserved.</Copyright>
     <PackageTags>RockLib.Logging.Analyzers, analyzers</PackageTags>
     <NoPackageAnalysis>true</NoPackageAnalysis>
 
@@ -26,7 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="" />
     <None Include="..\..\icon.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
