@@ -6,7 +6,7 @@ using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
 namespace RockLib.Logging.Analyzers.Test
 {
     public class CaughtExceptionShouldBeLoggedAnalyzerTests
-    {
+    {        
         [Fact(DisplayName = "Diagnostics are reported when exception is not passed to logging extension methods")]
         public async Task DiagnosticsReported1()
         {
@@ -325,6 +325,42 @@ public class Test
             var logEntry = new LogEntry(""A log without exception"", LogLevel.Info);
             logEntry.Exception = ex;
             logger.Log(logEntry);
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are not reported when exception is filtered and logged")]
+        public async Task DiagnosticsReported7()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException ex)
+        {
+            logger.Debug(""A debug log without exception"", ex);
+            logger.Info(""An info log without exception"", ex);
+            logger.Warn(""A warn log without exception"", ex);
+            logger.Error(""An error log without exception"", ex);
+            logger.Fatal(""A fatal log without exception"", ex);
+            logger.Audit(""An audit log without exception"", ex);
+
+            logger.DebugSanitized(""A debug log without exception"", ex, new { foo = 123 });
+            logger.InfoSanitized(""An info log without exception"", ex, new { foo = 123 });
+            logger.WarnSanitized(""A warn log without exception"", ex, new { foo = 123 });
+            logger.ErrorSanitized(""An error log without exception"", ex, new { foo = 123 });
+            logger.FatalSanitized(""A fatal log without exception"", ex, new { foo = 123 });
+            logger.AuditSanitized(""An audit log without exception"", ex, new { foo = 123 });
         }
     }
 }");
