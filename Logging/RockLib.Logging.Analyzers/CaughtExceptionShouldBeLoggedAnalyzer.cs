@@ -121,39 +121,7 @@ namespace RockLib.Logging.Analyzers
                     parent = parent.Parent;
                 }
                 return null;
-            }
-
-            private bool IsException(ITypeSymbol symbol)
-            {
-                if (symbol.Name.Equals("Exception"))
-                {
-                    return true;
-                }
-
-                if (symbol.BaseType != null)
-                {
-                    if (symbol.BaseType.Name.Equals("Exception"))
-                    {
-                        return true;
-                    }
-                    return IsException(symbol.BaseType);
-                }
-
-                return false;
-            }
-
-            private ImmutableArray<ILocalSymbol> GetRootMethodBody(IOperation op, List<ILocalSymbol> symbolArray)
-            {
-                if (op.Parent is IBlockOperation block)
-                {
-                    symbolArray.AddRange(block.Locals);
-                }
-
-                if (op.Parent == null)
-                    return symbolArray.ToImmutableArray();
-
-                return GetRootMethodBody(op.Parent, symbolArray);
-            }
+            }          
 
             private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
                 ICatchClauseOperation catchClause)
