@@ -10,6 +10,24 @@ namespace RockLib.Logging.Analyzers
 {
     public static class CommonExtensions
     {
+        public static bool IsException(this ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol.Name.Equals("Exception"))
+            {
+                return true;
+            }
+
+            if (typeSymbol.BaseType != null)
+            {
+                if (typeSymbol.BaseType.Name.Equals("Exception"))
+                {
+                    return true;
+                }
+                return IsException(typeSymbol.BaseType);
+            }
+
+            return false;
+        }
         public static IObjectCreationOperation GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)
         {
             if (logEntryArgument.Value is IObjectCreationOperation objectCreation)

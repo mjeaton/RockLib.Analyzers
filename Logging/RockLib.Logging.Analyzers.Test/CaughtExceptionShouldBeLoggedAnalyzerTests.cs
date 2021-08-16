@@ -6,7 +6,7 @@ using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
 namespace RockLib.Logging.Analyzers.Test
 {
     public class CaughtExceptionShouldBeLoggedAnalyzerTests
-    {        
+    {
         [Fact(DisplayName = "Diagnostics are reported when exception is not passed to logging extension methods")]
         public async Task DiagnosticsReported1()
         {
@@ -267,7 +267,7 @@ public class Test
         {
             throw new ArgumentException(""This is a test"");
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             var logEntry = new LogEntry(""A log without exception"", ex, LogLevel.Info);
             logger.Log(logEntry);
@@ -292,7 +292,7 @@ public class Test
         {
             throw new ArgumentException(""This is a test"");
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             var logEntry = new LogEntry(""A log without exception"", LogLevel.Info)
             {
@@ -303,6 +303,8 @@ public class Test
     }
 }");
         }
+
+
 
         [Fact(DisplayName = "No diagnostics are reported when exception is passed to log entry property setter")]
         public async Task NoDiagnosticsReported4()

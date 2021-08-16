@@ -3,15 +3,12 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
+    public partial class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Caught exception should be logged";
         private static readonly LocalizableString _messageFormat = "The caught exception should be passed into the logging method";
@@ -55,7 +52,7 @@ namespace RockLib.Logging.Analyzers
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
-        private class InvocationOperationAnalyzer
+        private partial class InvocationOperationAnalyzer
         {
             private readonly INamedTypeSymbol _loggingExtensionsType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
@@ -87,9 +84,6 @@ namespace RockLib.Logging.Analyzers
                     visitor.Visit(catchClause);
                     if (visitor.IsExceptionCaught)
                         return;
-
-                    //if (ParameterCapturesCatchException(invocationOperation, catchClause))
-                    //    return;
                 }
                 else if (methodSymbol.Name == "Log"
                     && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType))
@@ -121,7 +115,7 @@ namespace RockLib.Logging.Analyzers
                     parent = parent.Parent;
                 }
                 return null;
-            }          
+            }
 
             private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
                 ICatchClauseOperation catchClause)
@@ -129,127 +123,9 @@ namespace RockLib.Logging.Analyzers
                 if (catchClause.ExceptionDeclarationOrExpression is null)
                     return false;
 
-                if (logEntryCreation.Arguments.Length > 0)
-                {
-                    var exceptionArgument = logEntryCreation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                    if (exceptionArgument != null
-                        && !exceptionArgument.IsImplicit
-                        && exceptionArgument.Value is ILocalReferenceOperation localReference
-                        && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                        && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                    {
-                        return true;
-                    }
-                }
-
-                if (logEntryCreation.Initializer != null)
-                {
-                    foreach (var initializer in logEntryCreation.Initializer.Initializers)
-                    {
-                        if (initializer is ISimpleAssignmentOperation assignment
-                            && assignment.Target is IPropertyReferenceOperation property
-                            && property.Property.Name == "Exception"
-                            && assignment.Value is ILocalReferenceOperation localReference
-                            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                            && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                if (logEntryArgumentValue is ILocalReferenceOperation logEntryReference)
-                {
-                    var visitor = new SimpleAssignmentWalker(logEntryReference);
-                    visitor.Visit(logEntryCreation.GetRootOperation());
-                    return visitor.IsExceptionSet;
-                }
-
-                return false;
-            }
-
-            private class CatchParameterWalker : OperationWalker
-            {
-                private readonly IInvocationOperation _invocationOperation;
-
-                public CatchParameterWalker(IInvocationOperation invocationOperation)
-                {
-                    _invocationOperation = invocationOperation;
-                }
-
-                public bool IsExceptionCaught { get; private set; }
-
-                private bool IsException(ITypeSymbol symbol)
-                {
-                    if (symbol.Name.Equals("Exception"))
-                    {
-                        return true;
-                    }
-
-                    if (symbol.BaseType != null)
-                    {
-                        if (symbol.BaseType.Name.Equals("Exception"))
-                        {
-                            return true;
-                        }
-                        return IsException(symbol.BaseType);
-                    }
-
-                    return false;
-                }
-
-                public override void VisitCatchClause(ICatchClauseOperation catchClause)
-                {
-                    if (catchClause.ExceptionDeclarationOrExpression is null)
-                        IsExceptionCaught = true;
-
-                    var argument = _invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                    if (argument == null || argument.IsImplicit)
-                    {
-                        IsExceptionCaught = false;
-                    }
-                    else if (argument.Value is ILocalReferenceOperation localReference
-                    && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
-                    {
-                        var isException = IsException(localReference.Type);
-                        IsExceptionCaught = isException && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol);
-                    }
-                    else if (argument.Value is IConversionOperation conversion
-                        && conversion.Operand is ILocalReferenceOperation convertedLocalReference
-                        && !conversion.ConstantValue.HasValue
-                        && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation catchVariableDeclarator)
-                    {                        
-                        var doesCaughtExceptionMatchArgument = SymbolEqualityComparer.Default.Equals(convertedLocalReference.Local, catchVariableDeclarator.Symbol);                        
-                        IsExceptionCaught = IsException(conversion.Type) && doesCaughtExceptionMatchArgument;
-                    }
-
-                    base.VisitCatchClause(catchClause);
-                }
-            }
-
-            private class SimpleAssignmentWalker : OperationWalker
-            {
-                private readonly ILocalReferenceOperation _logEntryReference;
-
-                public SimpleAssignmentWalker(ILocalReferenceOperation logEntryReference)
-                {
-                    _logEntryReference = logEntryReference;
-                }
-
-                public bool IsExceptionSet { get; private set; }
-
-                public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)
-                {
-                    if (operation.Target is IPropertyReferenceOperation property
-                        && property.Property.Name == "Exception"
-                        && property.Instance is ILocalReferenceOperation localReference
-                        && SymbolEqualityComparer.Default.Equals(localReference.Local, _logEntryReference.Local))
-                    {
-                        IsExceptionSet = true;
-                    }
-
-                    base.VisitSimpleAssignment(operation);
-                }
+                var logWalker = new LogEntryCreatedWalker(logEntryArgumentValue, logEntryCreation);
+                logWalker.Visit(logEntryCreation.GetRootOperation());
+                return logWalker.IsExceptionSet;
             }
         }
     }
