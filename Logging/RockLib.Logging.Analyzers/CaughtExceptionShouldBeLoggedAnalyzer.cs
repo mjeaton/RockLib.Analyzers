@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public partial class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
+    public class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Caught exception should be logged";
         private static readonly LocalizableString _messageFormat = "The caught exception should be passed into the logging method";
@@ -52,7 +52,7 @@ namespace RockLib.Logging.Analyzers
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
-        private partial class InvocationOperationAnalyzer
+        private class InvocationOperationAnalyzer
         {
             private readonly INamedTypeSymbol _loggingExtensionsType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
