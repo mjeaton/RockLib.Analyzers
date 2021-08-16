@@ -304,8 +304,6 @@ public class Test
 }");
         }
 
-
-
         [Fact(DisplayName = "No diagnostics are reported when exception is passed to log entry property setter")]
         public async Task NoDiagnosticsReported4()
         {
