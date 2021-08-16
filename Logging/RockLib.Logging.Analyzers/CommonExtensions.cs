@@ -89,7 +89,7 @@ namespace RockLib.Logging.Analyzers
             while (true)
             {
                 type = type.BaseType;
-                if (type.SpecialType == SpecialType.System_Object)
+                if (type == null || type.SpecialType == SpecialType.System_Object)
                     break;
                 properties = properties.Concat(GetProperties(type));
             }
