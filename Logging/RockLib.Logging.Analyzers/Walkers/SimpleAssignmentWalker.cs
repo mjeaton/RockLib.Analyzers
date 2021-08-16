@@ -21,7 +21,6 @@ namespace RockLib.Logging.Analyzers
                 && property.Instance is ILocalReferenceOperation localReference
                 && SymbolEqualityComparer.Default.Equals(localReference.Local, _logEntryReference.Local))
             {
-                var a = property.Property as IMemberReferenceOperation;
                 IsExceptionSet = true;
             }
             else if (operation.Target is IPropertyReferenceOperation propertyRef
@@ -30,7 +29,6 @@ namespace RockLib.Logging.Analyzers
                 && conversionOperation.Operand is ILocalReferenceOperation localRef
                 && SymbolEqualityComparer.Default.Equals(localRef.Local, _logEntryReference.Local))
             {
-
                 IsExceptionSet = true;
             }
 
