@@ -7,10 +7,14 @@ namespace RockLib.Logging.Analyzers
     internal class CatchParameterWalker : OperationWalker
     {
         private readonly IInvocationOperation _invocationOperation;
+        private readonly ITypeSymbol _exceptionType;
+        private readonly Compilation _compilation;
 
-        public CatchParameterWalker(IInvocationOperation invocationOperation)
+        public CatchParameterWalker(IInvocationOperation invocationOperation, ITypeSymbol exceptionType, Compilation compilation)
         {
             _invocationOperation = invocationOperation;
+            _exceptionType = exceptionType;
+            _compilation = compilation;
         }
 
         public bool IsExceptionCaught { get; private set; }
@@ -28,7 +32,7 @@ namespace RockLib.Logging.Analyzers
             else if (argument.Value is ILocalReferenceOperation localReference
             && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
             {
-                var isException = localReference.Type.IsException();
+                var isException = localReference.Type.IsException(_exceptionType, _compilation);
                 IsExceptionCaught = isException && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol);
             }
             else if (argument.Value is IConversionOperation conversion
@@ -36,8 +40,9 @@ namespace RockLib.Logging.Analyzers
                 && !conversion.ConstantValue.HasValue
                 && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation catchVariableDeclarator)
             {
+                var isEx = _compilation.ClassifyCommonConversion(convertedLocalReference.Type, _exceptionType).IsImplicit;
                 var doesCaughtExceptionMatchArgument = SymbolEqualityComparer.Default.Equals(convertedLocalReference.Local, catchVariableDeclarator.Symbol);
-                IsExceptionCaught = conversion.Type.IsException() && doesCaughtExceptionMatchArgument;
+                IsExceptionCaught = convertedLocalReference.Type.IsException(_exceptionType, _compilation) && doesCaughtExceptionMatchArgument;
             }
 
             base.VisitCatchClause(catchClause);

@@ -9,11 +9,18 @@ namespace RockLib.Logging.Analyzers
     {
         private readonly IOperation _logEntryArgumentValue;
         private readonly IObjectCreationOperation _createOperation;
+        private readonly ITypeSymbol _exceptionType;
+        private readonly Compilation _compilation;
 
-        public LogEntryCreatedWalker(IOperation logEntryArgumentValue, IObjectCreationOperation createOperation)
+        public LogEntryCreatedWalker(IOperation logEntryArgumentValue,
+            IObjectCreationOperation createOperation,
+            ITypeSymbol exceptionType,
+            Compilation compilation)
         {
             _logEntryArgumentValue = logEntryArgumentValue;
             _createOperation = createOperation;
+            _exceptionType = exceptionType;
+            _compilation = compilation;
         }
 
         public bool IsExceptionSet { get; private set; }
@@ -39,7 +46,8 @@ namespace RockLib.Logging.Analyzers
                     && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation catchVariableDeclarator)
                 {
                     var doesCaughtExceptionMatchArgument = SymbolEqualityComparer.Default.Equals(convertedLocalReference.Local, catchVariableDeclarator.Symbol);
-                    IsExceptionSet = conversion.Type.IsException() && doesCaughtExceptionMatchArgument;
+                    IsExceptionSet = conversion.Type.IsException(_exceptionType, _compilation)
+                       && doesCaughtExceptionMatchArgument;
                     return;
                 }
             }
@@ -65,7 +73,7 @@ namespace RockLib.Logging.Analyzers
                        && conversionAssignment.Value is IConversionOperation conversionOperation
                        && conversionOperation.Operand is ILocalReferenceOperation localRef
                        && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation caughtVariable
-                       && localRef.Local.Type.IsException()
+                       && localRef.Local.Type.IsException(_exceptionType, _compilation)
                        && SymbolEqualityComparer.Default.Equals(localRef.Local, caughtVariable.Symbol))
                     {
                         IsExceptionSet = true;
