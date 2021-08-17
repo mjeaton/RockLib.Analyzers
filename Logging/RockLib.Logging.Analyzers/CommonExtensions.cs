@@ -10,6 +10,11 @@ namespace RockLib.Logging.Analyzers
 {
     public static class CommonExtensions
     {
+        public static bool IsException(this ITypeSymbol typeSymbol, ITypeSymbol exceptionType, Compilation compilation)
+        {
+            return compilation.ClassifyCommonConversion(typeSymbol, exceptionType).IsImplicit;
+        }
+
         public static IObjectCreationOperation GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)
         {
             if (logEntryArgument.Value is IObjectCreationOperation objectCreation)
@@ -71,7 +76,7 @@ namespace RockLib.Logging.Analyzers
             while (true)
             {
                 type = type.BaseType;
-                if (type.SpecialType == SpecialType.System_Object)
+                if (type == null || type.SpecialType == SpecialType.System_Object)
                     break;
                 properties = properties.Concat(GetProperties(type));
             }

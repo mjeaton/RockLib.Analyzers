@@ -1,9 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
@@ -47,8 +47,11 @@ namespace RockLib.Logging.Analyzers
             if (loggerType == null)
                 return;
 
-            var analyzer = new InvocationOperationAnalyzer(loggingExtensionsType, safeLoggingExtensionsType, loggerType);
+            var exceptionType = context.Compilation.GetTypeByMetadataName("System.Exception");
+            if (exceptionType == null)
+                return;
 
+            var analyzer = new InvocationOperationAnalyzer(loggingExtensionsType, exceptionType, safeLoggingExtensionsType, loggerType);
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
@@ -57,11 +60,15 @@ namespace RockLib.Logging.Analyzers
             private readonly INamedTypeSymbol _loggingExtensionsType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
             private readonly INamedTypeSymbol _loggerType;
+            private readonly INamedTypeSymbol _exceptionType;
 
-            public InvocationOperationAnalyzer(INamedTypeSymbol loggingExtensionsType, INamedTypeSymbol safeLoggingExtensionsType,
+            public InvocationOperationAnalyzer(INamedTypeSymbol loggingExtensionsType,
+                INamedTypeSymbol exceptionType,
+                INamedTypeSymbol safeLoggingExtensionsType,
                 INamedTypeSymbol loggerType)
             {
                 _loggingExtensionsType = loggingExtensionsType;
+                _exceptionType = exceptionType;
                 _safeLoggingExtensionsType = safeLoggingExtensionsType;
                 _loggerType = loggerType;
             }
@@ -80,7 +87,9 @@ namespace RockLib.Logging.Analyzers
                 if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
                     || SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
                 {
-                    if (ParameterCapturesCatchException(invocationOperation, catchClause))
+                    var visitor = new CatchParameterWalker(invocationOperation, _exceptionType, context.Compilation);
+                    visitor.Visit(catchClause);
+                    if (visitor.IsExceptionCaught)
                         return;
                 }
                 else if (methodSymbol.Name == "Log"
@@ -90,7 +99,7 @@ namespace RockLib.Logging.Analyzers
                     var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
 
                     if (logEntryCreation == null
-                        || IsExceptionSet(logEntryCreation, logEntryArgument.Value, catchClause))
+                        || IsExceptionSet(logEntryCreation, logEntryArgument.Value, catchClause, context.Compilation))
                     {
                         return;
                     }
@@ -115,93 +124,15 @@ namespace RockLib.Logging.Analyzers
                 return null;
             }
 
-            private bool ParameterCapturesCatchException(IInvocationOperation invocationOperation,
-                ICatchClauseOperation catchClause)
-            {
-                if (catchClause.ExceptionDeclarationOrExpression is null)
-                    return false;
-
-                var argument = invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                if (argument == null || argument.IsImplicit)
-                    return false;
-
-                if (argument.Value is ILocalReferenceOperation localReference
-                    && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
-                {
-                    return SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol);
-                }
-
-                return false;
-            }
-
             private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
-                ICatchClauseOperation catchClause)
+                ICatchClauseOperation catchClause, Compilation compilation)
             {
                 if (catchClause.ExceptionDeclarationOrExpression is null)
                     return false;
 
-                if (logEntryCreation.Arguments.Length > 0)
-                {
-                    var exceptionArgument = logEntryCreation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                    if (exceptionArgument != null
-                        && !exceptionArgument.IsImplicit
-                        && exceptionArgument.Value is ILocalReferenceOperation localReference
-                        && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                        && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                    {
-                        return true;
-                    }
-                }
-
-                if (logEntryCreation.Initializer != null)
-                {
-                    foreach (var initializer in logEntryCreation.Initializer.Initializers)
-                    {
-                        if (initializer is ISimpleAssignmentOperation assignment
-                            && assignment.Target is IPropertyReferenceOperation property
-                            && property.Property.Name == "Exception"
-                            && assignment.Value is ILocalReferenceOperation localReference
-                            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
-                            && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol))
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                if (logEntryArgumentValue is ILocalReferenceOperation logEntryReference)
-                {
-                    var visitor = new SimpleAssignmentWalker(logEntryReference);
-                    visitor.Visit(logEntryCreation.GetRootOperation());
-                    return visitor.IsExceptionSet;
-                }
-
-                return false;
-            }
-
-            private class SimpleAssignmentWalker : OperationWalker
-            {
-                private readonly ILocalReferenceOperation _logEntryReference;
-
-                public SimpleAssignmentWalker(ILocalReferenceOperation logEntryReference)
-                {
-                    _logEntryReference = logEntryReference;
-                }
-
-                public bool IsExceptionSet { get; private set; }
-
-                public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)
-                {
-                    if (operation.Target is IPropertyReferenceOperation property
-                        && property.Property.Name == "Exception"
-                        && property.Instance is ILocalReferenceOperation localReference
-                        && SymbolEqualityComparer.Default.Equals(localReference.Local, _logEntryReference.Local))
-                    {
-                        IsExceptionSet = true;
-                    }
-
-                    base.VisitSimpleAssignment(operation);
-                }
+                var logWalker = new LogEntryCreatedWalker(logEntryArgumentValue, logEntryCreation, _exceptionType, compilation);
+                logWalker.Visit(logEntryCreation.GetRootOperation());
+                return logWalker.IsExceptionSet;
             }
         }
     }
