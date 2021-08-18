@@ -365,5 +365,67 @@ public class Test
     }
 }");
         }
+
+        [Fact(DisplayName = "Diagnostics are not reported when multiple catch blocks occur with LogEntry")]
+        public async Task NoDiagnosticsReported8()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            var log = new LogEntry(""message"", argEx, LogLevel.Error);
+             logger.Log(log);
+        }
+        catch (WebException webEx)
+        {
+            var log = new LogEntry(""message"", webEx, LogLevel.Error);
+            logger.Log(log);
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are reported when multiple catch blocks occur with LogEntry and exception not provided")]
+        public async Task NoDiagnosticsReported9()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+             [|logger.Log(log)|];
+        }
+        catch (WebException webEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+            [|logger.Log(log)|];
+        }
+    }
+}");
+        }
     }
 }
