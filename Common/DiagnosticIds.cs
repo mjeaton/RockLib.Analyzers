@@ -10,5 +10,6 @@
         public const string NoLogLevelSpecified = "RockLib0005";
         public const string CaughtExceptionShouldBeLogged = "RockLib0006";
         public const string UnexpectedExtendedPropertiesObject = "RockLib0007";
+        public const string NoMessageSpecified = "RockLib0008";
     }
 }

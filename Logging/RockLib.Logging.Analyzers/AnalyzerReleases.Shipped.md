@@ -24,3 +24,12 @@ Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 RockLib0006 | Usage | Warning | CaughtExceptionShouldBeLoggedAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0006.md)
 RockLib0007 | Usage | Warning | UnexpectedExtendedPropertiesObjectAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0007.md)
+
+## Release 1.0.4
+
+
+### New Rules
+
+Rule ID | Category | Severity | Notes
+--------|----------|----------|-------
+RockLib0008 | Usage | Warning | NoLogMessageSpecifiedAnalyzer, [Documentation](https://github.com/RockLib/RockLib.Analyzers/blob/main/Rules/RockLib0008.md)
