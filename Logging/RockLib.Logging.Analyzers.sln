@@ -27,6 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\Rules\RockLib0005.md = ..\Rules\RockLib0005.md
 		..\Rules\RockLib0006.md = ..\Rules\RockLib0006.md
 		..\Rules\RockLib0007.md = ..\Rules\RockLib0007.md
+		..\Rules\RockLib0008.md = ..\Rules\RockLib0008.md
 	EndProjectSection
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "RockLib.Analyzers.Common", "..\Common\RockLib.Analyzers.Common.shproj", "{886A10E9-6C82-4E91-9DA0-14DC9531234F}"
