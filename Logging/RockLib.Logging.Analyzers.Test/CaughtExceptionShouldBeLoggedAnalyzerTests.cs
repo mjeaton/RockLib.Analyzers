@@ -417,7 +417,7 @@ public class Test
         catch (ArgumentException argEx)
         {
             var log = new LogEntry(""message"", argEx, LogLevel.Error);
-             logger.Log(log);
+            logger.Log(log);
         }
         catch (WebException webEx)
         {
