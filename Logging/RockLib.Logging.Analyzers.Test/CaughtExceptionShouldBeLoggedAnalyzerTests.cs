@@ -215,6 +215,37 @@ public class Test
 }");
         }
 
+        [Fact(DisplayName = "Diagnostics are reported when multiple catch blocks occur with LogEntry and exception not provided")]
+        public async Task DiagnosticsReported7()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+             [|logger.Log(log)|];
+        }
+        catch (WebException webEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+            [|logger.Log(log)|];
+        }
+    }
+}");
+        }
+
         [Fact(DisplayName = "No diagnostics are reported when exception is passed to logging extension methods")]
         public async Task NoDiagnosticsReported1()
         {
@@ -331,7 +362,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are not reported when exception is filtered and logged")]
-        public async Task DiagnosticsReported7()
+        public async Task NoDiagnosticsReported5()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -367,7 +398,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are not reported when multiple catch blocks occur with LogEntry")]
-        public async Task NoDiagnosticsReported8()
+        public async Task NoDiagnosticsReported6()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -392,37 +423,6 @@ public class Test
         {
             var log = new LogEntry(""message"", webEx, LogLevel.Error);
             logger.Log(log);
-        }
-    }
-}");
-        }
-
-        [Fact(DisplayName = "Diagnostics are reported when multiple catch blocks occur with LogEntry and exception not provided")]
-        public async Task NoDiagnosticsReported9()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using RockLib.Logging.SafeLogging;
-using System;
-using System.Net;
-
-public class Test
-{
-    public void Call_Log_Within_Catch_Block(ILogger logger)
-    {
-        try
-        {
-            throw new ArgumentException(""This is a test"");
-        }
-        catch (ArgumentException argEx)
-        {
-            var log = new LogEntry(""message"", LogLevel.Error);
-             [|logger.Log(log)|];
-        }
-        catch (WebException webEx)
-        {
-            var log = new LogEntry(""message"", LogLevel.Error);
-            [|logger.Log(log)|];
         }
     }
 }");
