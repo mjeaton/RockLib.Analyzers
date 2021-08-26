@@ -12,7 +12,7 @@ namespace RockLib.Logging.Analyzers
     public class NoLogMessageSpecifiedAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "No message specified";
-        private static readonly LocalizableString _messageFormat = "A message for the LogEntry cannot be null or empty";
+        private static readonly LocalizableString _messageFormat = "The message cannot be null or empty";
         private static readonly LocalizableString _description = "Logs should have a message.";
 
         public static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
