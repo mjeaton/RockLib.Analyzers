@@ -8,7 +8,7 @@ namespace RockLib.Logging.Analyzers.Test
     public class NoLogMessageSpecifiedAnalyzerTests
     {
         [Fact(DisplayName = "Diagnostics are not reported when log message is provided")]
-        public async Task DiagnosticsReported1()
+        public async Task NoDiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -23,8 +23,54 @@ public class Test
 }");
         }
 
+        [Fact(DisplayName = "Diagnostics are not reported when log message is provided")]
+        public async Task NoDiagnosticsReported2()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+
+public class Test
+{
+    public void Call_Log_With_LogEntry_With_Message_Not_Set(ILogger logger)
+    {
+        logger.Info(""geodude"");
+        logger.Debug(""geodude"");
+        logger.Warn(""geodude"");
+        logger.Error(""geodude"");
+        logger.Audit(""geodude"");
+
+        logger.InfoSanitized(""graveler"", new { value = 123 });
+        logger.DebugSanitized(""graveler"", new { value = 123 });
+        logger.WarnSanitized(""graveler"", new { value = 123 });
+        logger.ErrorSanitized(""graveler"", new { value = 123 });
+        logger.AuditSanitized(""graveler"", new { value = 123 });
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are not reported when an log message is set in property")]
+        public async Task NoDiagnosticsReported3()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using System;
+
+public class Test
+{
+    public void Call_Log_With_LogEntry_With_Message_Not_Set(ILogger logger)
+    {
+        LogEntry log = new LogEntry();
+        log.Level = LogLevel.Debug;
+        log.Message = ""no problemz here."";
+        logger.Log(log);
+    }
+}");
+        }
+
         [Fact(DisplayName = "Diagnostics are reported when log message is not provided in ctor")]
-        public async Task DiagnosticsReported2()
+        public async Task DiagnosticsReported1()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -41,7 +87,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are reported when log message is not provided in LogEntry initializer")]
-        public async Task DiagnosticsReported3()
+        public async Task DiagnosticsReported2()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -58,7 +104,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are reported when an empty log message is not provided in LogEntry initializer")]
-        public async Task DiagnosticsReported4()
+        public async Task DiagnosticsReported3()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -75,7 +121,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are reported when a log message is not set and symbols match")]
-        public async Task DiagnosticsReported5()
+        public async Task DiagnosticsReported4()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -98,30 +144,12 @@ public class Test
 }");
         }
 
-        [Fact(DisplayName = "Diagnostics are not reported when an log message is set in property")]
-        public async Task DiagnosticsReported6()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using System;
-
-public class Test
-{
-    public void Call_Log_With_LogEntry_With_Message_Not_Set(ILogger logger)
-    {
-        LogEntry log = new LogEntry();
-        log.Level = LogLevel.Debug;
-        log.Message = ""no problemz here."";
-        logger.Log(log);
-    }
-}");
-        }
-
         [Fact(DisplayName = "Diagnostics are reported when log message is empty in logging method")]
         public async Task DiagnosticsReported7()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
 using System;
 
 public class Test
@@ -129,22 +157,16 @@ public class Test
     public void Call_Log_With_LogEntry_With_Message_Not_Set(ILogger logger)
     {
         logger.Info([|""""|]);
-    }
-}");
-        }
+        logger.Debug([|""""|]);
+        logger.Warn([|""""|]);
+        logger.Error([|""""|]);
+        logger.Audit([|""""|]);
 
-        [Fact(DisplayName = "Diagnostics are not reported when log message is provided")]
-        public async Task DiagnosticsReported8()
-        {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
-using System;
-
-public class Test
-{
-    public void Call_Log_With_LogEntry_With_Message_Not_Set(ILogger logger)
-    {        
-        logger.Info(""graveler"");
+        logger.InfoSanitized([|""""|], new { value = 456 });
+        logger.DebugSanitized([|""""|], new { value = 456 });
+        logger.WarnSanitized([|""""|], new { value = 456 });
+        logger.ErrorSanitized([|""""|], new { value = 456 });
+        logger.AuditSanitized([|""""|], new { value = 456 });
     }
 }");
         }

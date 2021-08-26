@@ -79,20 +79,21 @@ namespace RockLib.Logging.Analyzers
 
                     syntaxLocation = logEntryArgument.Syntax.GetLocation();
                 }
-                else
+                else if (methodSymbol.IsLoggingExtensionMethod())
                 {
                     var arguments = invocationOperation.Arguments;
                     var messageArg = arguments.FirstOrDefault(argument => argument.Parameter.Name == "message");
 
                     if (messageArg.Value.ConstantValue.HasValue
-                        && !string.IsNullOrEmpty(messageArg.Value.ConstantValue.Value.ToString())
-                        || (messageArg.Value is ILocalReferenceOperation localRef
-                            && SymbolEqualityComparer.Default.Equals(localRef.Local, _stringType)))
+                        && string.IsNullOrEmpty(messageArg.Value.ConstantValue.Value.ToString()))
+                    {
+                        syntaxLocation = messageArg.Syntax.GetLocation();
+                    }
+                    else
                     {
                         return;
                     }
 
-                    syntaxLocation = messageArg.Syntax.GetLocation();
                 }
 
                 if (syntaxLocation != null)

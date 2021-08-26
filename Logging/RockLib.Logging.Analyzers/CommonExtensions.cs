@@ -10,6 +10,15 @@ namespace RockLib.Logging.Analyzers
 {
     public static class CommonExtensions
     {
+        public static bool IsLoggingExtensionMethod(this IMethodSymbol methodSymbol)
+        {
+            string methodName = methodSymbol.Name;
+            methodName = methodName.Replace("Sanitized", string.Empty);
+            string[] levels = { "Debug", "Info", "Warn", "Error", "Fatal", "Audit" };
+
+            return levels.Contains(methodName);
+        }
+
         public static bool IsException(this ITypeSymbol typeSymbol, ITypeSymbol exceptionType, Compilation compilation)
         {
             return compilation.ClassifyCommonConversion(typeSymbol, exceptionType).IsImplicit;
