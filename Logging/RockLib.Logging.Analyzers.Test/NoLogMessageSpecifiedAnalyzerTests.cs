@@ -82,6 +82,9 @@ public class Test
     {
         var entry = new  LogEntry("""", LogLevel.Info);
         logger.Log([|entry|]);
+
+        var entry2 = new  LogEntry(null, LogLevel.Info);
+        logger.Log([|entry2|]);
     }
 }");
         }
@@ -116,6 +119,9 @@ public class Test
     {
         LogEntry logEntry1 = new LogEntry(){Message = """", Level = LogLevel.Debug};
         logger.Log([|logEntry1|]);
+
+        LogEntry logEntry2 = new LogEntry(){Message = null, Level = LogLevel.Debug};
+        logger.Log([|logEntry2|]);
     }
 }");
         }
@@ -138,8 +144,8 @@ public class Test
 
         LogEntry log2 = new LogEntry();
         log2.Level = LogLevel.Debug;
-        log2.Message = ""weird"";
-        logger.Log(log2);
+        log2.Message = null;
+        logger.Log([|log2|]);
     }
 }");
         }
@@ -162,11 +168,23 @@ public class Test
         logger.Error([|""""|]);
         logger.Audit([|""""|]);
 
+        logger.Info([|null|]);
+        logger.Debug([|null|]);
+        logger.Warn([|null|]);
+        logger.Error([|null|]);
+        logger.Audit([|null|]);
+
         logger.InfoSanitized([|""""|], new { value = 456 });
         logger.DebugSanitized([|""""|], new { value = 456 });
         logger.WarnSanitized([|""""|], new { value = 456 });
         logger.ErrorSanitized([|""""|], new { value = 456 });
         logger.AuditSanitized([|""""|], new { value = 456 });
+
+        logger.InfoSanitized([|null|], new { value = 456 });
+        logger.DebugSanitized([|null|], new { value = 456 });
+        logger.WarnSanitized([|null|], new { value = 456 });
+        logger.ErrorSanitized([|null|], new { value = 456 });
+        logger.AuditSanitized([|null|], new { value = 456 });
     }
 }");
         }

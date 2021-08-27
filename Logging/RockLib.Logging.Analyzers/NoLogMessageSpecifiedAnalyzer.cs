@@ -98,7 +98,8 @@ namespace RockLib.Logging.Analyzers
                     var messageArg = arguments.FirstOrDefault(argument => argument.Parameter.Name == "message");
 
                     if (messageArg.Value.ConstantValue.HasValue
-                        && string.IsNullOrEmpty(messageArg.Value.ConstantValue.Value.ToString()))
+                        && (messageArg.Value.ConstantValue.Value == null
+                        || string.IsNullOrEmpty(messageArg.Value.ConstantValue.Value.ToString())))
                     {
                         syntaxLocation = messageArg.Syntax.GetLocation();
                     }
@@ -123,6 +124,7 @@ namespace RockLib.Logging.Analyzers
                     var levelArgument = logEntryCreation.Arguments.First(a => a.Parameter.Name == "message");
                     if (!levelArgument.IsImplicit
                         && levelArgument.Value.ConstantValue.HasValue
+                        && levelArgument.Value.ConstantValue.Value != null
                         && !string.IsNullOrEmpty(levelArgument.Value.ConstantValue.Value.ToString()))
                         return true;
                 }
@@ -135,6 +137,7 @@ namespace RockLib.Logging.Analyzers
                             && assignment.Target is IPropertyReferenceOperation property
                             && SymbolEqualityComparer.Default.Equals(property.Type, _stringType)
                             && assignment.Value.ConstantValue.HasValue
+                            && assignment.Value.ConstantValue.Value != null
                             && !string.IsNullOrEmpty(assignment.Value.ConstantValue.Value.ToString()))
                         {
                             return true;
@@ -171,6 +174,7 @@ namespace RockLib.Logging.Analyzers
                         && SymbolEqualityComparer.Default.Equals(property.Type, _stringType)
                         && property.Parent is ISimpleAssignmentOperation parentProperty
                         && parentProperty.Value.ConstantValue.HasValue
+                        && parentProperty.Value.ConstantValue.Value != null
                         && !string.IsNullOrEmpty(parentProperty.Value.ConstantValue.Value.ToString())
                         && property.Instance is ILocalReferenceOperation local
                         && SymbolEqualityComparer.Default.Equals(local.Local, _logEntryReference.Local))
