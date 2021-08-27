@@ -3,8 +3,10 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
@@ -66,20 +68,57 @@ namespace RockLib.Logging.Analyzers
                        ChangeToAnonymousObjectTitle,
                        createChangedDocument: cancellationToken => ChangeDoc(arg, invocation, methodInvocation, root, context),
                        equivalenceKey: "somekey"), diagnostic);
-
                 }
             }
         }
 
-        private Task<Document> ChangeDoc(IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, SyntaxNode root, CodeFixContext context)
+        private async Task<Document> ChangeDoc(IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, SyntaxNode root, CodeFixContext context)
         {
+            var docEditor = await DocumentEditor.CreateAsync(context.Document);
             var anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression();
 
-            var operation = arg.Value as IConversionOperation;
-            var operationName = operation.Operand as ILocalReferenceOperation;
-            var argName = operationName.Local.Name;
+            var nodes = new List<SyntaxNode>();
+            string anonymousArgumentName = string.Empty;
+            LocalDeclarationStatementSyntax objectDeclaration = null;
+            if (arg.Value is IConversionOperation conversion
+                && conversion.Operand is ILocalReferenceOperation localOperation)
+            {
+                anonymousArgumentName = localOperation.Local.Name;
+            }
+            else if (arg.Value is IConversionOperation objectConversion
+                && objectConversion.Operand is IObjectCreationOperation objectCreation
+                && objectCreation.Syntax is BaseObjectCreationExpressionSyntax baseObjectCreation)
+            {
+                var objectInitializerArgs = baseObjectCreation.ArgumentList;
 
-            var ass2 = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(argName));
+                var name = objectCreation.Type.Name;
+                anonymousArgumentName = char.ToLowerInvariant(name[0]) + name.Substring(1);
+                objectDeclaration = SyntaxFactory.LocalDeclarationStatement(
+                SyntaxFactory.VariableDeclaration(
+                    SyntaxFactory.IdentifierName(
+                        SyntaxFactory.Identifier(
+                            SyntaxFactory.TriviaList(),
+                            SyntaxKind.VarKeyword,
+                            "var",
+                            "var",
+                            SyntaxFactory.TriviaList())))
+                .WithVariables(
+                    SyntaxFactory.SingletonSeparatedList(
+                        SyntaxFactory.VariableDeclarator(
+                            SyntaxFactory.Identifier(anonymousArgumentName))
+                        .WithInitializer(
+                            SyntaxFactory.EqualsValueClause(
+                                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.IdentifierName(name))
+                                .WithArgumentList(
+                                    objectInitializerArgs))))))
+                    //.WithTriviaFrom(invocation)
+                    //.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed)
+                    .NormalizeWhitespace();
+
+                nodes.Add(objectDeclaration);
+            }
+
+            var ass2 = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(anonymousArgumentName));
 
             var anonymousObjectParameter = new List<AnonymousObjectMemberDeclaratorSyntax>() { ass2 };
 
@@ -94,38 +133,33 @@ namespace RockLib.Logging.Analyzers
             var replacementInvocationExpression = invocationExpression.WithArgumentList(
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments)));
 
-            var newRoot = root.ReplaceNode(
-                invocation,
-                replacementInvocationExpression);
 
-            return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
-        }
+            //var newRoot = root.ReplaceNode(
+            //        invocation, replacementInvocationExpression)
+            //    .InsertNodesBefore(root.FindNode(invocation.Span), nodes);
 
-        private class AnonymousObjectWalker : OperationWalker
-        {
-            private readonly INamedTypeSymbol _objectType;
-            private readonly ILocalReferenceOperation _objectReference;
+            docEditor.InsertBefore(invocation, nodes[0]);
+            //docEditor.ReplaceNode(
+            //        invocation, replacementInvocationExpression);
+            // docEditor.InsertBefore(invocation, nodes[0]);
 
-            public AnonymousObjectWalker(INamedTypeSymbol objectType, ILocalReferenceOperation objectReference)
+            if (nodes.Any())
             {
-                _objectType = objectType;
-                _objectReference = objectReference;
+                //var found = newRoot.FindNode(invocation.Span);
+                //newRoot = newRoot.InsertNodesBefore(found, nodes);
+
+                //var found = root.FindNode(replacementInvocationExpression.Span);
+                //newRoot = root.ReplaceNode(found, nodes[0]);
+
+                //var found = newRoot.FindNode(invocation.Span);
+                //newRoot = newRoot.InsertNodesBefore(found, nodes);
             }
 
-            public string ObjectSymbol{ get; private set; }
+            //return context.Document.WithSyntaxRoot(newRoot);
+            return docEditor.GetChangedDocument();
+            return context.Document.WithSyntaxRoot(root);
 
-            public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)
-            {
-                if (operation.Target is IPropertyReferenceOperation property
-                       && SymbolEqualityComparer.Default.Equals(property.Type, _objectType)
-                       && property.Instance is ILocalReferenceOperation localReference
-                       && SymbolEqualityComparer.Default.Equals(localReference.Local, _objectReference.Local))
-                {
-                    ObjectSymbol = localReference.Local.Name;
-                }
-
-                base.VisitSimpleAssignment(operation);base.VisitSimpleAssignment(operation);
-            }
+            // return docEditor.GetChangedDocument();
         }
 
         private IEnumerable<ArgumentSyntax> AddAnonArgument(IEnumerable<ArgumentSyntax> argumentsToFix,
