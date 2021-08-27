@@ -40,22 +40,34 @@ namespace RockLib.Logging.Analyzers
             if (iloggerType == null)
                 return;
 
+            var loggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LoggingExtensions");
+            if (loggingExtensionsType == null)
+                return;
+
+            var safeLoggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
+            if (safeLoggingExtensionsType == null)
+                return;
+
             var stringType = context.Compilation.GetTypeByMetadataName("System.String");
             if (stringType == null)
                 return;
 
-            var analyzer = new OperationAnalyzer(iloggerType, stringType);
+            var analyzer = new OperationAnalyzer(iloggerType, loggingExtensionsType, safeLoggingExtensionsType, stringType);
             context.RegisterOperationAction(analyzer.AnalyzeInvocation, OperationKind.Invocation);
         }
 
         private class OperationAnalyzer
         {
             private readonly INamedTypeSymbol _iloggerType;
+            private readonly INamedTypeSymbol _loggingExtensionType;
+            private readonly INamedTypeSymbol _safeLoggingExtensionType;
             private readonly INamedTypeSymbol _stringType;
 
-            public OperationAnalyzer(INamedTypeSymbol iloggerType, INamedTypeSymbol stringType)
+            public OperationAnalyzer(INamedTypeSymbol iloggerType, INamedTypeSymbol loggingExtensionsType, INamedTypeSymbol safeLoggingExtensionType, INamedTypeSymbol stringType)
             {
                 _iloggerType = iloggerType;
+                _loggingExtensionType = loggingExtensionsType;
+                _safeLoggingExtensionType = safeLoggingExtensionType;
                 _stringType = stringType;
             }
 
@@ -79,7 +91,8 @@ namespace RockLib.Logging.Analyzers
 
                     syntaxLocation = logEntryArgument.Syntax.GetLocation();
                 }
-                else if (methodSymbol.IsLoggingExtensionMethod())
+                else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionType)
+                    || SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionType))
                 {
                     var arguments = invocationOperation.Arguments;
                     var messageArg = arguments.FirstOrDefault(argument => argument.Parameter.Name == "message");
