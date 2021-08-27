@@ -27,6 +27,9 @@ namespace RockLib.Logging.Analyzers
 
         public override void VisitCatchClause(ICatchClauseOperation catchClause)
         {
+            if (IsExceptionSet)
+                return;
+
             if (_createOperation.Arguments.Length > 0)
             {
                 var exceptionArgument = _createOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
