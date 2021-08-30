@@ -16,14 +16,18 @@ using RockLib.Logging;
 using System;
 public class Florp
 {
-    public string Grelp { get; set; }
+    public Florp(string grelp)
+    {
+        Grelp = grelp;
+    }
+    public string Grelp { get; }
 }
 
 public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        var anonymousFlorp = new Florp();
+        var anonymousFlorp = new Florp(""abc"");
         [|logger.Info(""no good message"", anonymousFlorp)|];
     }
 }", @"
@@ -31,14 +35,18 @@ using RockLib.Logging;
 using System;
 public class Florp
 {
-    public string Grelp { get; set; }
+    public Florp(string grelp)
+    {
+        Grelp = grelp;
+    }
+    public string Grelp { get; }
 }
 
 public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        var anonymousFlorp = new Florp();
+        var anonymousFlorp = new Florp(""abc"");
         logger.Info(""no good message"", new { anonymousFlorp });
     }
 }");
@@ -63,7 +71,7 @@ public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        [|logger.Info(""no good message"", new Florp(""golem""))|];
+        [|logger.Info(""no good message"", new Florp(""greninja""))|];
     }
 }", @"
 using RockLib.Logging;
@@ -81,10 +89,11 @@ public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        var florp = new Florp(""greninja"");
-        logger.Info(""no good message"", new { florp });
+        logger.Info(""no good message"", new { Florp = new Florp(""greninja"") });
     }
 }");
         }
+
+
     }
 }

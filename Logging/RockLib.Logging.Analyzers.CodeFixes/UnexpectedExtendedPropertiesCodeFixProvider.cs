@@ -66,63 +66,42 @@ namespace RockLib.Logging.Analyzers
                     context.RegisterCodeFix(
                        CodeAction.Create(
                        ChangeToAnonymousObjectTitle,
-                       createChangedDocument: cancellationToken => ChangeDoc(arg, invocation, methodInvocation, root, context),
+                       createChangedDocument: cancellationToken => ChangeDoc(diagnostic, arg, invocation, methodInvocation, root, context),
                        equivalenceKey: "somekey"), diagnostic);
                 }
             }
         }
 
-        private async Task<Document> ChangeDoc(IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, SyntaxNode root, CodeFixContext context)
+        private async Task<Document> ChangeDoc(Diagnostic diag, IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, SyntaxNode root, CodeFixContext context)
         {
             var docEditor = await DocumentEditor.CreateAsync(context.Document);
             var anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression();
 
             var nodes = new List<SyntaxNode>();
-            string anonymousArgumentName = string.Empty;
-            LocalDeclarationStatementSyntax objectDeclaration = null;
             if (arg.Value is IConversionOperation conversion
                 && conversion.Operand is ILocalReferenceOperation localOperation)
             {
-                anonymousArgumentName = localOperation.Local.Name;
+                var anonymousArgumentName = localOperation.Local.Name;
+                var ass2 = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(anonymousArgumentName));
+                var anonymousObjectParameter = new List<AnonymousObjectMemberDeclaratorSyntax>() { ass2 };
+                anonymousObjectCreation = anonymousObjectCreation.WithInitializers(SyntaxFactory.SeparatedList(anonymousObjectParameter));
             }
             else if (arg.Value is IConversionOperation objectConversion
                 && objectConversion.Operand is IObjectCreationOperation objectCreation
                 && objectCreation.Syntax is BaseObjectCreationExpressionSyntax baseObjectCreation)
             {
                 var objectInitializerArgs = baseObjectCreation.ArgumentList;
-
                 var name = objectCreation.Type.Name;
-                anonymousArgumentName = char.ToLowerInvariant(name[0]) + name.Substring(1);
-                objectDeclaration = SyntaxFactory.LocalDeclarationStatement(
-                SyntaxFactory.VariableDeclaration(
-                    SyntaxFactory.IdentifierName(
-                        SyntaxFactory.Identifier(
-                            SyntaxFactory.TriviaList(),
-                            SyntaxKind.VarKeyword,
-                            "var",
-                            "var",
-                            SyntaxFactory.TriviaList())))
-                .WithVariables(
-                    SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.VariableDeclarator(
-                            SyntaxFactory.Identifier(anonymousArgumentName))
-                        .WithInitializer(
-                            SyntaxFactory.EqualsValueClause(
-                                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.IdentifierName(name))
-                                .WithArgumentList(
-                                    objectInitializerArgs))))))
-                    //.WithTriviaFrom(invocation)
-                    //.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed)
-                    .NormalizeWhitespace();
-
-                nodes.Add(objectDeclaration);
+                anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression(
+                                        SyntaxFactory.SingletonSeparatedList(
+                                            SyntaxFactory.AnonymousObjectMemberDeclarator(
+                                                SyntaxFactory.ObjectCreationExpression(
+                                                    SyntaxFactory.IdentifierName(name))
+                                                .WithArgumentList(objectInitializerArgs))
+                                            .WithNameEquals(
+                                                SyntaxFactory.NameEquals(
+                                                    SyntaxFactory.IdentifierName(name)))));
             }
-
-            var ass2 = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(anonymousArgumentName));
-
-            var anonymousObjectParameter = new List<AnonymousObjectMemberDeclaratorSyntax>() { ass2 };
-
-            anonymousObjectCreation = anonymousObjectCreation.WithInitializers(SyntaxFactory.SeparatedList(anonymousObjectParameter));
 
             var extendedPropertyArguments = new List<ArgumentSyntax>();
             extendedPropertyArguments.Add(SyntaxFactory.Argument(anonymousObjectCreation));
@@ -133,33 +112,8 @@ namespace RockLib.Logging.Analyzers
             var replacementInvocationExpression = invocationExpression.WithArgumentList(
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments)));
 
-
-            //var newRoot = root.ReplaceNode(
-            //        invocation, replacementInvocationExpression)
-            //    .InsertNodesBefore(root.FindNode(invocation.Span), nodes);
-
-            docEditor.InsertBefore(invocation, nodes[0]);
-            //docEditor.ReplaceNode(
-            //        invocation, replacementInvocationExpression);
-            // docEditor.InsertBefore(invocation, nodes[0]);
-
-            if (nodes.Any())
-            {
-                //var found = newRoot.FindNode(invocation.Span);
-                //newRoot = newRoot.InsertNodesBefore(found, nodes);
-
-                //var found = root.FindNode(replacementInvocationExpression.Span);
-                //newRoot = root.ReplaceNode(found, nodes[0]);
-
-                //var found = newRoot.FindNode(invocation.Span);
-                //newRoot = newRoot.InsertNodesBefore(found, nodes);
-            }
-
-            //return context.Document.WithSyntaxRoot(newRoot);
+            docEditor.ReplaceNode(invocation, replacementInvocationExpression);
             return docEditor.GetChangedDocument();
-            return context.Document.WithSyntaxRoot(root);
-
-            // return docEditor.GetChangedDocument();
         }
 
         private IEnumerable<ArgumentSyntax> AddAnonArgument(IEnumerable<ArgumentSyntax> argumentsToFix,
