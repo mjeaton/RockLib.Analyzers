@@ -215,6 +215,87 @@ public class Test
 }");
         }
 
+        [Fact(DisplayName = "Diagnostics are reported when multiple catch blocks occur with LogEntry and exception not provided")]
+        public async Task DiagnosticsReported7()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+             [|logger.Log(log)|];
+        }
+        catch (WebException webEx)
+        {
+            var log = new LogEntry(""message"", LogLevel.Error);
+            [|logger.Log(log)|];
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are reported when multiple catch blocks occur and caught exception is not passed to logging method")]
+        public async Task DiagnosticsReported8()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        var someOtherException = new InvalidOperationException(""Some other exception"");
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            [|logger.Error(""ope, an error occurred"", someOtherException)|];
+            [|logger.Info(""ope, an error occurred"", someOtherException)|];
+            [|logger.Debug(""ope, an error occurred"", someOtherException)|];
+            [|logger.Warn(""ope, an error occurred"", someOtherException)|];
+            [|logger.Audit(""ope, an error occurred"", someOtherException)|];
+
+            [|logger.ErrorSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.InfoSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.DebugSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.WarnSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.AuditSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+        }
+        catch (WebException webEx)
+        {
+            [|logger.Error(""ope, an error occurred"", someOtherException)|];
+            [|logger.Info(""ope, an error occurred"", someOtherException)|];
+            [|logger.Debug(""ope, an error occurred"", someOtherException)|];
+            [|logger.Warn(""ope, an error occurred"", someOtherException)|];
+            [|logger.Audit(""ope, an error occurred"", someOtherException)|];
+
+            [|logger.ErrorSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.InfoSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.DebugSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.WarnSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+            [|logger.AuditSanitized(""ope, an error occurred"", someOtherException, new { foo = 123 })|];
+        }
+    }
+}");
+        }
+
         [Fact(DisplayName = "No diagnostics are reported when exception is passed to logging extension methods")]
         public async Task NoDiagnosticsReported1()
         {
@@ -331,7 +412,7 @@ public class Test
         }
 
         [Fact(DisplayName = "Diagnostics are not reported when exception is filtered and logged")]
-        public async Task DiagnosticsReported7()
+        public async Task NoDiagnosticsReported5()
         {
             await RockLibVerifier.VerifyAnalyzerAsync(@"
 using RockLib.Logging;
@@ -361,6 +442,86 @@ public class Test
             logger.ErrorSanitized(""An error log without exception"", ex, new { foo = 123 });
             logger.FatalSanitized(""A fatal log without exception"", ex, new { foo = 123 });
             logger.AuditSanitized(""An audit log without exception"", ex, new { foo = 123 });
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are not reported when multiple catch blocks occur with LogEntry")]
+        public async Task NoDiagnosticsReported6()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            var log = new LogEntry(""message"", argEx, LogLevel.Error);
+            logger.Log(log);
+        }
+        catch (WebException webEx)
+        {
+            var log = new LogEntry(""message"", webEx, LogLevel.Error);
+            logger.Log(log);
+        }
+    }
+}");
+        }
+
+        [Fact(DisplayName = "Diagnostics are not reported when multiple catch blocks occur and caught exception is passed to logging method")]
+        public async Task NoDiagnosticsReported7()
+        {
+            await RockLibVerifier.VerifyAnalyzerAsync(@"
+using RockLib.Logging;
+using RockLib.Logging.SafeLogging;
+using System;
+using System.Net;
+
+public class Test
+{
+    public void Call_Log_Within_Catch_Block(ILogger logger)
+    {
+        try
+        {
+            throw new ArgumentException(""This is a test"");
+        }
+        catch (ArgumentException argEx)
+        {
+            logger.Error(""ope, an error occurred"", argEx);
+            logger.Info(""ope, an error occurred"", argEx);
+            logger.Debug(""ope, an error occurred"", argEx);
+            logger.Warn(""ope, an error occurred"", argEx);
+            logger.Audit(""ope, an error occurred"", argEx);
+
+            logger.ErrorSanitized(""ope, an error occurred"", argEx, new { foo = 123 });
+            logger.InfoSanitized(""ope, an error occurred"", argEx, new { foo = 123 });
+            logger.DebugSanitized(""ope, an error occurred"", argEx, new { foo = 123 });
+            logger.WarnSanitized(""ope, an error occurred"", argEx, new { foo = 123 });
+            logger.AuditSanitized(""ope, an error occurred"", argEx, new { foo = 123 });
+        }
+        catch (WebException webEx)
+        {
+            logger.Error(""ope, an error occurred"", webEx);
+            logger.Info(""ope, an error occurred"", webEx);
+            logger.Debug(""ope, an error occurred"", webEx);
+            logger.Warn(""ope, an error occurred"", webEx);
+            logger.Audit(""ope, an error occurred"", webEx);
+
+            logger.ErrorSanitized(""ope, an error occurred"", webEx, new { foo = 123 });
+            logger.InfoSanitized(""ope, an error occurred"", webEx, new { foo = 123 });
+            logger.DebugSanitized(""ope, an error occurred"", webEx, new { foo = 123 });
+            logger.WarnSanitized(""ope, an error occurred"", webEx, new { foo = 123 });
+            logger.AuditSanitized(""ope, an error occurred"", webEx, new { foo = 123 });
         }
     }
 }");
