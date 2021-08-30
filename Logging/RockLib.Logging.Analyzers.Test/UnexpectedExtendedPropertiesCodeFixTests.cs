@@ -94,6 +94,50 @@ public class Test
 }");
         }
 
+        [Fact(DisplayName = "Code fix applied when extended properties are not provided as an anonymous in Logging method")]
+        public async Task CodeFixApplied3()
+        {
+            await RockLibVerifier.VerifyCodeFixAsync(@"
+using RockLib.Logging;
+using System;
+public class Florp
+{
+    public Florp(string grelp)
+    {
+        Grelp = grelp;
+    }
+    public string Grelp { get; }
+}
+
+public class Test
+{
+    public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
+    {
+        var logEntry = [|new LogEntry(""no good message"", extendedProperties: new Florp(""frogadier""))|];
+        logger.Log(logEntry);
+    }
+}", @"
+using RockLib.Logging;
+using System;
+public class Florp
+{
+    public Florp(string grelp)
+    {
+        Grelp = grelp;
+    }
+    public string Grelp { get; }
+}
+
+public class Test
+{
+    public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
+    {
+        var logEntry = new LogEntry(""no good message"", extendedProperties: new { Florp = new Florp(""frogadier"") });
+        logger.Log(logEntry);
+    }
+}");
+        }
+
 
     }
 }
