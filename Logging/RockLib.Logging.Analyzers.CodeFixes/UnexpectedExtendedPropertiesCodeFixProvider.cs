@@ -6,12 +6,10 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RockLib.Logging.Analyzers
@@ -35,7 +33,7 @@ namespace RockLib.Logging.Analyzers
                 if (node is InvocationExpressionSyntax invocation
                     && invocation.ArgumentList.Arguments.Count > 1)
                 {
-                    var methodInvocation = (IInvocationOperation)semanticModel.GetOperation(invocation);
+                    var methodInvocation = (IInvocationOperation)semanticModel.GetOperation(invocation, context.CancellationToken);
                     var arg = methodInvocation.Arguments.FirstOrDefault(a => a.Parameter.Name == "extendedProperties");
 
                     context.RegisterCodeFix(
@@ -85,7 +83,6 @@ namespace RockLib.Logging.Analyzers
                                                 SyntaxFactory.NameEquals(
                                                     SyntaxFactory.IdentifierName(name)))));
             }
-
 
            var anonymousObjectArgument = includeNamedColon
                 ? SyntaxFactory.Argument(anonymousObjectCreation).WithNameColon(SyntaxFactory.NameColon("extendedProperties"))
