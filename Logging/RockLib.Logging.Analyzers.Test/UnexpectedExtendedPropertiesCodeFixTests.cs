@@ -27,7 +27,7 @@ public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        var anonymousFlorp = new Florp(""abc"");
+        var anonymousFlorp = new Florp(""alakazam"");
         [|logger.Info(""no good message"", anonymousFlorp)|];
     }
 }", @"
@@ -46,7 +46,7 @@ public class Test
 {
     public void Call_Log_With_LogEntry_With_Level_Not_Set(ILogger logger)
     {
-        var anonymousFlorp = new Florp(""abc"");
+        var anonymousFlorp = new Florp(""alakazam"");
         logger.Info(""no good message"", new { anonymousFlorp });
     }
 }");
