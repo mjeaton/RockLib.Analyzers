@@ -73,15 +73,12 @@ namespace RockLib.Logging.Analyzers
                 var objectInitializerArgs = baseObjectCreation.ArgumentList;
                 var name = convertedObj.Type.Name;
                 anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression(
-
-                                        SyntaxFactory.SingletonSeparatedList(
-                                            SyntaxFactory.AnonymousObjectMemberDeclarator(
-                                                SyntaxFactory.ObjectCreationExpression(
-                                                    SyntaxFactory.IdentifierName(name))
-                                                .WithArgumentList(objectInitializerArgs))
-                                            .WithNameEquals(
-                                                SyntaxFactory.NameEquals(
-                                                    SyntaxFactory.IdentifierName(name)))));
+                    SyntaxFactory.SingletonSeparatedList(
+                        SyntaxFactory.AnonymousObjectMemberDeclarator(
+                            SyntaxFactory.ObjectCreationExpression(
+                                SyntaxFactory.IdentifierName(name))
+                        .WithArgumentList(objectInitializerArgs))
+                    .WithNameEquals(SyntaxFactory.NameEquals(SyntaxFactory.IdentifierName(name)))));
             }
 
            var anonymousObjectArgument = includeNamedColon
