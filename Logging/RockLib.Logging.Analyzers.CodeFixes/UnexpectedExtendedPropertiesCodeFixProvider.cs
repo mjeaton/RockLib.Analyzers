@@ -17,8 +17,7 @@ namespace RockLib.Logging.Analyzers
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UnexpectedExtendedPropertiesCodeFixProvider)), Shared]
     public class UnexpectedExtendedPropertiesCodeFixProvider : CodeFixProvider
     {
-        public const string ChangeToAnonymousObjectTitle = "Change to anonymous object";
-        public const string ReplaceTypeTitle = "Replace type to anonymous object";
+        public const string ReplaceWithAnonymousObjectTitle = "Replace with anonymous object";
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UnexpectedExtendedPropertiesObject);
 
@@ -38,9 +37,9 @@ namespace RockLib.Logging.Analyzers
 
                     context.RegisterCodeFix(
                        CodeAction.Create(
-                       ChangeToAnonymousObjectTitle,
+                       ReplaceWithAnonymousObjectTitle,
                        createChangedDocument: cancellationToken => ChangeDocForLoggingExtension(arg, invocation, methodInvocation, context),
-                       equivalenceKey: nameof(ReplaceTypeTitle)), diagnostic);
+                       equivalenceKey: nameof(ReplaceWithAnonymousObjectTitle)), diagnostic);
                 }
                 else if (node is ObjectCreationExpressionSyntax objectCreation)
                 {
@@ -48,47 +47,11 @@ namespace RockLib.Logging.Analyzers
 
                     context.RegisterCodeFix(
                         CodeAction.Create(
-                        ChangeToAnonymousObjectTitle,
+                        ReplaceWithAnonymousObjectTitle,
                         createChangedDocument: cancellationToken => ChangeDocForLogEntry(objectCreation,newLogEntryOperation, context),
-                        equivalenceKey: nameof(ReplaceTypeTitle)), diagnostic);
+                        equivalenceKey: nameof(ReplaceWithAnonymousObjectTitle)), diagnostic);
                 }
             }
-        }
-
-        private IEnumerable<ArgumentSyntax> CreateAnonymousObjectAsArgument(IArgumentOperation arg, bool includeNamedColon)
-        {
-            var anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression();
-            if (arg.Value is IConversionOperation conversion
-                && conversion.Operand is ILocalReferenceOperation localOperation)
-            {
-                var anonymousArgumentName = localOperation.Local.Name;
-                var anonymousObjectDeclarator = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(anonymousArgumentName));
-                var anonymousObjectParameter = new List<AnonymousObjectMemberDeclaratorSyntax>() { anonymousObjectDeclarator };
-                anonymousObjectCreation = anonymousObjectCreation.WithInitializers(SyntaxFactory.SeparatedList(anonymousObjectParameter));
-            }
-            else if (arg.Value is IConversionOperation objectConversion
-                && objectConversion.Operand is IObjectCreationOperation convertedObj
-                && convertedObj.Syntax is BaseObjectCreationExpressionSyntax baseObjectCreation)
-            {
-                var objectInitializerArgs = baseObjectCreation.ArgumentList;
-                var name = convertedObj.Type.Name;
-                anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression(
-                    SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.AnonymousObjectMemberDeclarator(
-                            SyntaxFactory.ObjectCreationExpression(
-                                SyntaxFactory.IdentifierName(name))
-                        .WithArgumentList(objectInitializerArgs))
-                    .WithNameEquals(SyntaxFactory.NameEquals(SyntaxFactory.IdentifierName(name)))));
-            }
-
-           var anonymousObjectArgument = includeNamedColon
-                ? SyntaxFactory.Argument(anonymousObjectCreation).WithNameColon(SyntaxFactory.NameColon("extendedProperties"))
-                : SyntaxFactory.Argument(anonymousObjectCreation);
-
-            var extendedPropertyArguments = new List<ArgumentSyntax>();
-            extendedPropertyArguments.Add(anonymousObjectArgument);
-
-            return extendedPropertyArguments;
         }
 
         private async Task<Document> ChangeDocForLogEntry(ObjectCreationExpressionSyntax objectCreation, IObjectCreationOperation newLogEntryOperation, CodeFixContext context)
@@ -124,6 +87,42 @@ namespace RockLib.Logging.Analyzers
             docEditor.ReplaceNode(invocation, replacementInvocationExpression);
 
             return docEditor.GetChangedDocument();
+        }
+
+        private IEnumerable<ArgumentSyntax> CreateAnonymousObjectAsArgument(IArgumentOperation arg, bool includeNamedColon)
+        {
+            var anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression();
+            if (arg.Value is IConversionOperation conversion
+                && conversion.Operand is ILocalReferenceOperation localOperation)
+            {
+                var anonymousArgumentName = localOperation.Local.Name;
+                var anonymousObjectDeclarator = SyntaxFactory.AnonymousObjectMemberDeclarator(SyntaxFactory.IdentifierName(anonymousArgumentName));
+                var anonymousObjectParameter = new List<AnonymousObjectMemberDeclaratorSyntax>() { anonymousObjectDeclarator };
+                anonymousObjectCreation = anonymousObjectCreation.WithInitializers(SyntaxFactory.SeparatedList(anonymousObjectParameter));
+            }
+            else if (arg.Value is IConversionOperation objectConversion
+                && objectConversion.Operand is IObjectCreationOperation convertedObj
+                && convertedObj.Syntax is BaseObjectCreationExpressionSyntax baseObjectCreation)
+            {
+                var objectInitializerArgs = baseObjectCreation.ArgumentList;
+                var name = convertedObj.Type.Name;
+                anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression(
+                    SyntaxFactory.SingletonSeparatedList(
+                        SyntaxFactory.AnonymousObjectMemberDeclarator(
+                            SyntaxFactory.ObjectCreationExpression(
+                                SyntaxFactory.IdentifierName(name))
+                        .WithArgumentList(objectInitializerArgs))
+                    .WithNameEquals(SyntaxFactory.NameEquals(SyntaxFactory.IdentifierName(name)))));
+            }
+
+            var anonymousObjectArgument = includeNamedColon
+                 ? SyntaxFactory.Argument(anonymousObjectCreation).WithNameColon(SyntaxFactory.NameColon("extendedProperties"))
+                 : SyntaxFactory.Argument(anonymousObjectCreation);
+
+            var extendedPropertyArguments = new List<ArgumentSyntax>();
+            extendedPropertyArguments.Add(anonymousObjectArgument);
+
+            return extendedPropertyArguments;
         }
 
         private IEnumerable<ArgumentSyntax> UpdateArguments(IEnumerable<ArgumentSyntax> argumentsToFix,
