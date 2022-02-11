@@ -1,12 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
-using RockLibVerifier = RockLib.Logging.Microsoft.Extensions.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousAnalyzer>;
+﻿using System.Threading.Tasks;
+using Xunit;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
 {
-    [TestClass]
-    public class LoggerShouldBeSynchronousAnalyzerTests
+    public static class LoggerShouldBeSynchronousAnalyzerTests
     {
         private const string AspNetCoreShim = @"
 
@@ -38,10 +35,13 @@ namespace Microsoft.AspNetCore.Hosting
     }
 }";
 
-        [TestMethod(null)]
-        public async Task DiagnosticsReported1()
+        // TODO: Need a test where AddRockLibLoggerProvider() is not called, 
+        // and when the processing mode isn't synchronous
+
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalled()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -55,13 +55,13 @@ public class Startup
 
         services.AddRockLibLoggerProvider();
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task DiagnosticsReported2()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithName()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -75,13 +75,13 @@ public class Startup
 
         services.AddRockLibLoggerProvider(""MyLogger"");
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task DiagnosticsReported3()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledAndProviderIsConfiguredElsewhere()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -116,13 +116,13 @@ public class Startup
         services.[|AddLogger()|]
             .AddConsoleLogProvider();
     }
-}" + AspNetCoreShim);
+}" + AspNetCoreShim).ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task DiagnosticsReported4()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithNameAndProviderIsConfiguredElsewhere()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -157,13 +157,13 @@ public class Startup
         services.[|AddLogger(""MyLogger"")|]
             .AddConsoleLogProvider();
     }
-}" + AspNetCoreShim);
+}" + AspNetCoreShim).ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithSynchronousProcessingMode()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -177,13 +177,13 @@ public class Startup
 
         services.AddRockLibLoggerProvider();
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported2()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithNameAndSynchronousProcessingMode()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -197,13 +197,13 @@ public class Startup
 
         services.AddRockLibLoggerProvider(""MyLogger"");
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported3()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithSynchronousProcessingModeAndProviderIsConfiguredElsewhere()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -238,13 +238,13 @@ public class Startup
         services.AddLogger(processingMode: Logger.ProcessingMode.Synchronous)
             .AddConsoleLogProvider();
     }
-}" + AspNetCoreShim);
+}" + AspNetCoreShim).ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported4()
+        [Fact]
+        public static async Task AnalyzeWhenAddLoggerIsCalledWithSynchronousProcessingModeAddNameAndProviderIsConfiguredElsewhere()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<LoggerShouldBeSynchronousAnalyzer>(@"
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -279,7 +279,7 @@ public class Startup
         services.AddLogger(""MyLogger"", processingMode: Logger.ProcessingMode.Synchronous)
             .AddConsoleLogProvider();
     }
-}" + AspNetCoreShim);
+}" + AspNetCoreShim).ConfigureAwait(false);
         }
     }
 }

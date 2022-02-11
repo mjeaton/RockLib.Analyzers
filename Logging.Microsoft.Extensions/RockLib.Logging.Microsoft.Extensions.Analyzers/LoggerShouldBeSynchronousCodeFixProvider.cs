@@ -14,7 +14,8 @@ using System.Threading.Tasks;
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(LoggerShouldBeSynchronousCodeFixProvider)), Shared]
-    public class LoggerShouldBeSynchronousCodeFixProvider : CodeFixProvider
+    public sealed class LoggerShouldBeSynchronousCodeFixProvider 
+        : CodeFixProvider
     {
         public const string AddSynchronousProcessingModeArgumentTitle = "Add 'processingMode' argument with a value of Logger.ProcessingMode.Synchronous";
         public const string ChangeProcessingModeArgumentToSynchronousTitle = "Change 'processingMode' argument to Logger.ProcessingMode.Synchronous";
@@ -29,23 +30,28 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
 
             if (semanticModel is null)
+            {
                 return;
+            }
 
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
             foreach (var diagnostic in context.Diagnostics)
             {
-                var node = root.FindNode(diagnostic.Location.SourceSpan);
+                var node = root!.FindNode(diagnostic.Location.SourceSpan);
+
                 if (node is InvocationExpressionSyntax invocationExpression
                     && semanticModel.GetOperation(node, context.CancellationToken) is IInvocationOperation invocationOperation)
                 {
-                    var processingModeArgumentOperation = invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "processingMode");
+                    var processingModeArgumentOperation = invocationOperation.Arguments.FirstOrDefault(a => a.Parameter!.Name == "processingMode");
 
-                    if (processingModeArgumentOperation == null)
+                    if (processingModeArgumentOperation is null)
+                    {
                         continue;
+                    }
 
                     if (processingModeArgumentOperation.IsImplicit)
                     {
@@ -86,7 +92,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                         arguments.Concat(new[] {
                             SyntaxFactory.Argument(
                                 SyntaxFactory.NameColon("processingMode"),
-                                default(SyntaxToken),
+                                default,
                                 SyntaxFactory.MemberAccessExpression(
                                     SyntaxKind.SimpleMemberAccessExpression,
                                     SyntaxFactory.MemberAccessExpression(
@@ -98,7 +104,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
-            root = root.ReplaceNode(invocationExpression.ArgumentList, replacementArgumentList);
+            root = root!.ReplaceNode(invocationExpression.ArgumentList, replacementArgumentList);
 
             if (root is CompilationUnitSyntax compilationUnit
                 && !compilationUnit.Usings.Any(u => u.Name.ToFullString() == "RockLib.Logging"))
@@ -117,7 +123,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
             IInvocationOperation invocationOperation,
             CancellationToken cancellationToken)
         {
-            var processingModeArgument = (ArgumentSyntax)invocationOperation.Arguments.Single(a => a.Parameter.Name == "processingMode").Syntax;
+            var processingModeArgument = (ArgumentSyntax)invocationOperation.Arguments.Single(a => a.Parameter!.Name == "processingMode").Syntax;
 
             var replacementArgument = processingModeArgument.WithExpression(
                 SyntaxFactory.MemberAccessExpression(
@@ -130,7 +136,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
-            root = root.ReplaceNode(processingModeArgument, replacementArgument);
+            root = root!.ReplaceNode(processingModeArgument, replacementArgument);
 
             return document.WithSyntaxRoot(root);
         }

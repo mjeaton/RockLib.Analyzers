@@ -1,26 +1,41 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-
-    <!-- Avoid ID conflicts with the package project. -->
-    <PackageId>*$(MSBuildProjectFullPath)*</PackageId>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="Resources.Designer.cs" DesignTime="True" AutoGen="True" DependentUpon="Resources.resx" />
-    <EmbeddedResource Update="Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
-  </ItemGroup>
-
-  <Import Project="..\..\Common\RockLib.Analyzers.Common.projitems" Label="Shared" />
-
+	<PropertyGroup>
+		<Description>Roslyn analyzers for RockLib.Logging.Microsoft.Extensions</Description>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<PackageId>RockLib.Logging.Microsoft.Extensions.Analyzers</PackageId>
+		<PackageVersion>1.0.1</PackageVersion>
+		<PackageProjectUrl>https://github.com/RockLib/RockLib.Analyzers</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageReleaseNotes>A changelog is available at https://github.com/RockLib/RockLib.Analyzers/blob/main/Logging.Microsoft.Extensions/CHANGELOG.md.</PackageReleaseNotes>
+		<PackageTags>RockLib.Logging.Microsoft.Extensions.Analyzers, analyzers</PackageTags>
+		<NoPackageAnalysis>true</NoPackageAnalysis>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
+		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\LICENSE.md" Pack="true" PackagePath="" />
+		<None Include="..\..\icon.png" Pack="true" PackagePath="" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.0.1" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
+	</ItemGroup>
+	<Import Project="..\..\Common\RockLib.Analyzers.Common.projitems" Label="Shared" />
+	<Target Name="_AddAnalyzersToOutput">
+		<ItemGroup>
+			<TfmSpecificPackageFile Include="$(OutputPath)\RockLib.Logging.Microsoft.Extensions.Analyzers.dll" PackagePath="analyzers/dotnet/cs" />
+		</ItemGroup>
+	</Target>
 </Project>

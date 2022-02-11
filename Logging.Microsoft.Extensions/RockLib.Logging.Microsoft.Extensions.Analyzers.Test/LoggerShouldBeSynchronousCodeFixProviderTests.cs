@@ -1,18 +1,14 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
-using RockLibVerifier = RockLib.Logging.Microsoft.Extensions.Analyzers.Test.CSharpCodeFixVerifier<
-    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousAnalyzer,
-    RockLib.Logging.Microsoft.Extensions.Analyzers.LoggerShouldBeSynchronousCodeFixProvider>;
+﻿using System.Threading.Tasks;
+using Xunit;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
 {
-    [TestClass]
-    public class LoggerShouldBeSynchronousCodeFixProviderTests
+    public sealed class LoggerShouldBeSynchronousCodeFixProviderTests
     {
-        [TestMethod(null)]
-        public async Task CodeFixApplied1()
+        [Fact]
+        public async Task VerifyWhenProcessingModeIsNotSpecified()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
+            await TestAssistants.VerifyCodeFixAsync<LoggerShouldBeSynchronousAnalyzer, LoggerShouldBeSynchronousCodeFixProvider>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -40,13 +36,13 @@ public class Startup
 
         services.AddRockLibLoggerProvider();
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task CodeFixApplied2()
+        [Fact]
+        public async Task VerifyWhenProcessingModeIsNotSynchronous()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
+            await TestAssistants.VerifyCodeFixAsync<LoggerShouldBeSynchronousAnalyzer, LoggerShouldBeSynchronousCodeFixProvider>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -74,7 +70,7 @@ public class Startup
 
         services.AddRockLibLoggerProvider();
     }
-}");
+}").ConfigureAwait(false);
         }
     }
 }

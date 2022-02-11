@@ -5,14 +5,16 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
 using RockLib.Analyzers.Common;
+using System;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class LoggerShouldBeSynchronousAnalyzer : DiagnosticAnalyzer
+    public sealed class LoggerShouldBeSynchronousAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Logger should be synchronous";
         private static readonly LocalizableString _messageFormat = "Loggers used by RockLibLoggerProvider should be synchronous";
@@ -26,12 +28,17 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.UseSanitizingLoggingMethod));
+            helpLinkUri: string.Format(CultureInfo.InvariantCulture, HelpLinkUri.Format, DiagnosticIds.UseSanitizingLoggingMethod));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context is null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -40,12 +47,16 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
             var addLoggerExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.DependencyInjection.ServiceCollectionExtensions");
-            if (addLoggerExtensionsType == null)
+            if (addLoggerExtensionsType is null)
+            {
                 return;
+            }
 
             var addRockLibLoggerProviderExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.RockLibLoggerProviderExtensions");
-            if (addRockLibLoggerProviderExtensionsType == null)
+            if (addRockLibLoggerProviderExtensionsType is null)
+            {
                 return;
+            }
 
             var analyzer = new OperationAnalyzer(addLoggerExtensionsType, addRockLibLoggerProviderExtensionsType);
 
@@ -74,7 +85,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                     return;
                 }
 
-                if (addLoggerOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "processingMode") is IArgumentOperation argument
+                if (addLoggerOperation.Arguments.FirstOrDefault(a => a.Parameter!.Name == "processingMode") is IArgumentOperation argument
                     && argument.Value is IFieldReferenceOperation field
                     && field.ConstantValue.HasValue
                     && Equals(field.ConstantValue.Value, 1))
@@ -83,7 +94,9 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 }
 
                 if (!HasAddRockLibLoggerProviderInvocation(context.Compilation, addLoggerOperation, context.CancellationToken))
+                {
                     return;
+                }
 
                 var invocationExpression = (InvocationExpressionSyntax)addLoggerOperation.Syntax;
                 var memberAccessExpression = (MemberAccessExpressionSyntax)invocationExpression.Expression;
@@ -98,17 +111,20 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
             private bool HasAddRockLibLoggerProviderInvocation(Compilation compilation,
                 IInvocationOperation addLoggerOperation, CancellationToken cancellationToken)
             {
+                // TODO: I think we should pass in the compilation to the constructor,
+                // and let it start walking by calling Visit() in the ctor.
                 var syntaxWalker = new SyntaxWalker(addLoggerOperation, _addRockLibLoggerProviderExtensionsType, cancellationToken);
                 syntaxWalker.Visit(compilation);
                 return syntaxWalker.HasAddRockLibLoggerProviderInvocation;
             }
 
-            private class SyntaxWalker : CSharpSyntaxWalker
+            private sealed class SyntaxWalker 
+                : CSharpSyntaxWalker
             {
                 private readonly string _loggerName;
                 private readonly INamedTypeSymbol _addRockLibLoggerProviderExtensionsType;
                 private readonly CancellationToken _cancellationToken;
-                private Compilation _compilation;
+                private Compilation? _compilation;
 
                 public SyntaxWalker(IInvocationOperation addLoggerOperation,
                     INamedTypeSymbol addRockLibLoggerProviderExtensionsType, CancellationToken cancellationToken)
@@ -124,7 +140,9 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 {
                     _compilation = compilation;
                     foreach (var syntaxTree in compilation.SyntaxTrees)
+                    {
                         Visit(syntaxTree.GetRoot(_cancellationToken));
+                    }
                 }
 
                 public override void VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -132,7 +150,7 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                     if (node.Expression is MemberAccessExpressionSyntax memberAccess
                         && memberAccess.Name is IdentifierNameSyntax identifier
                         && identifier.Identifier.Text == "AddRockLibLoggerProvider"
-                        && _compilation.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
+                        && _compilation!.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
                         && semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation
                         && SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _addRockLibLoggerProviderExtensionsType)
                         && invocation.Arguments.GetLoggerName() == _loggerName)

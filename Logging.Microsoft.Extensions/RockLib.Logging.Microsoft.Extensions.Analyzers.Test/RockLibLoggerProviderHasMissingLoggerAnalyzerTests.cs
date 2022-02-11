@@ -1,20 +1,14 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using RockLibVerifier = RockLib.Logging.Microsoft.Extensions.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Microsoft.Extensions.Analyzers.RockLibLoggerProviderHasMissingLoggerAnalyzer>;
+﻿using System.Threading.Tasks;
+using Xunit;
 
 namespace RockLib.Logging.Microsoft.Extensions.Analyzers.Test
 {
-    [TestClass]
-    public class RockLibLoggerProviderHasMissingLoggerAnalyzerTests
+    public static class RockLibLoggerProviderHasMissingLoggerAnalyzerTests
     {
-        [TestMethod(null)]
-        public async Task DiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenNameIsNotGivenToProvider()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<RockLibLoggerProviderHasMissingLoggerAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -26,13 +20,13 @@ public class Startup
         services.AddLogger(""MyLogger"");
         services.[|AddRockLibLoggerProvider()|];
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task DiagnosticsReported2()
+        [Fact]
+        public static async Task AnalyzeWhenNameIsNotGivenToLogger()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<RockLibLoggerProviderHasMissingLoggerAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -44,13 +38,13 @@ public class Startup
         services.AddLogger();
         services.[|AddRockLibLoggerProvider(""MyLogger"")|];
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenNamesAreNotGiven()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<RockLibLoggerProviderHasMissingLoggerAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -62,13 +56,13 @@ public class Startup
         services.AddLogger();
         services.AddRockLibLoggerProvider();
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod(null)]
-        public async Task NoDiagnosticsReported2()
+        [Fact]
+        public static async Task AnalyzeWhenNamesMatch()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<RockLibLoggerProviderHasMissingLoggerAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging;
 using RockLib.Logging.DependencyInjection;
@@ -80,7 +74,7 @@ public class Startup
         services.AddLogger(""MyLogger"");
         services.AddRockLibLoggerProvider(""MyLogger"");
     }
-}");
+}").ConfigureAwait(false);
         }
     }
 }

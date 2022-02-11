@@ -12,13 +12,13 @@ namespace RockLib.Logging.Microsoft.Extensions.Analyzers
                 && argument.Value is ILiteralOperation literal
                 && literal.ConstantValue.HasValue)
             {
-                return (string)literal.ConstantValue.Value;
+                return (string)literal.ConstantValue.Value!;
             }
 
             return "";
 
-            bool IsLoggerNameArgument(IArgumentOperation arg) =>
-                arg.Parameter.Name == "loggerName" || arg.Parameter.Name == "rockLibLoggerName";
+            static bool IsLoggerNameArgument(IArgumentOperation arg) =>
+                arg.Parameter!.Name == "loggerName" || arg.Parameter.Name == "rockLibLoggerName";
         }
     }
 }
