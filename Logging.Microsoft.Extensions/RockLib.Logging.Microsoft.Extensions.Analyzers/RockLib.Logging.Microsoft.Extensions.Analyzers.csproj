@@ -4,7 +4,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<PackageId>RockLib.Logging.Microsoft.Extensions.Analyzers</PackageId>
-		<PackageVersion>1.0.1</PackageVersion>
+		<PackageVersion>2.0.0</PackageVersion>
 		<PackageProjectUrl>https://github.com/RockLib/RockLib.Analyzers</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
