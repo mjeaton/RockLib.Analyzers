@@ -1,15 +1,16 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
+using System;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class NoLogLevelSpecifiedAnalyzer : DiagnosticAnalyzer
+    public sealed class NoLogLevelSpecifiedAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "No log level specified";
         private static readonly LocalizableString _messageFormat = "The Level of the LogEntry is not specified";
@@ -23,12 +24,13 @@ namespace RockLib.Logging.Analyzers
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.NoLogLevelSpecified));
+            helpLinkUri: string.Format(CultureInfo.InvariantCulture, HelpLinkUri.Format, DiagnosticIds.NoLogLevelSpecified));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context is null) { throw new ArgumentNullException(nameof(context)); }
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -37,19 +39,17 @@ namespace RockLib.Logging.Analyzers
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
             var iloggerType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.ILogger");
-            if (iloggerType == null)
-                return;
+            if (iloggerType is null) { return; }
 
             var logLevelType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogLevel");
-            if (logLevelType == null)
-                return;
+            if (logLevelType is null) { return; }
 
             var analyzer = new InvocationOperationAnalyzer(iloggerType, logLevelType);
 
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
-        private class InvocationOperationAnalyzer
+        private sealed class InvocationOperationAnalyzer
         {
             private readonly INamedTypeSymbol _iloggerType;
             private readonly INamedTypeSymbol _logLevelType;
@@ -75,7 +75,7 @@ namespace RockLib.Logging.Analyzers
                 var logEntryArgument = invocationOperation.Arguments[0];
                 var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
 
-                if (logEntryCreation == null
+                if (logEntryCreation is null
                     || IsLevelSet(logEntryCreation, logEntryArgument.Value))
                 {
                     return;
@@ -89,12 +89,14 @@ namespace RockLib.Logging.Analyzers
             {
                 if (logEntryCreation.Arguments.Length > 0)
                 {
-                    var levelArgument = logEntryCreation.Arguments.First(a => a.Parameter.Name == "level");
+                    var levelArgument = logEntryCreation.Arguments.First(a => a.Parameter!.Name == "level");
                     if (!levelArgument.IsImplicit)
+                    {
                         return true;
+                    }
                 }
 
-                if (logEntryCreation.Initializer != null)
+                if (logEntryCreation.Initializer is not null)
                 {
                     foreach (var initializer in logEntryCreation.Initializer.Initializers)
                     {
@@ -117,7 +119,7 @@ namespace RockLib.Logging.Analyzers
                 return false;
             }
 
-            private class SimpleAssignmentWalker : OperationWalker
+            private sealed class SimpleAssignmentWalker : OperationWalker
             {
                 private readonly INamedTypeSymbol _logLevelType;
                 private readonly ILocalReferenceOperation _logEntryReference;

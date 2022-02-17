@@ -1,22 +1,22 @@
-﻿using System.Threading.Tasks;
+﻿#if !NET48
+using System.Globalization;
+using System.Threading.Tasks;
 using Xunit;
-using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Analyzers.UseSanitizingLoggingMethodAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    public class UseSanitizingLoggingMethodAnalyzerTests
+    public static class UseSanitizingLoggingMethodAnalyzerTests
     {
-        [Fact(DisplayName = "Diagnostics are reported when setting extended property with a non-value type")]
-        public async Task DiagnosticsReported()
+        [Fact]
+        public static async Task AnalyzeWhenSettingExtendedPropertyWithNonValueType()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(
+            await TestAssistants.VerifyAnalyzerAsync<UseSanitizingLoggingMethodAnalyzer>(
                 GetTestCode(
                     extendedPropertyType: "TestClass",
-                    shouldReportDiagnostic: true));
+                    shouldReportDiagnostic: true)).ConfigureAwait(false);
         }
 
-        [Theory(DisplayName = "No diagnostics are reported for extended properties of specified type")]
+        [Theory]
         [InlineData("string")]
         [InlineData("bool")]
         [InlineData("char")]
@@ -41,21 +41,21 @@ namespace RockLib.Logging.Analyzers.Test
         [InlineData("System.Text.Encoding")]
         [InlineData("Type")]
         [InlineData("TypeCode")]
-        public async Task NoDiagnosticsReported(string extendedPropertyType)
+        public static async Task AnalyzextendedPropertiesOfSpecifiedType(string extendedPropertyType)
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(
+            await TestAssistants.VerifyAnalyzerAsync<UseSanitizingLoggingMethodAnalyzer>(
                 GetTestCode(
                     extendedPropertyType: extendedPropertyType,
-                    shouldReportDiagnostic: false));
+                    shouldReportDiagnostic: false)).ConfigureAwait(false);
         }
 
 
         private static string GetTestCode(string extendedPropertyType, bool shouldReportDiagnostic)
         {
-            string openDiagnostic = shouldReportDiagnostic ? "[|" : null;
-            string closeDiagnostic = shouldReportDiagnostic ? "|]" : null;
+            var openDiagnostic = shouldReportDiagnostic ? "[|" : null;
+            var closeDiagnostic = shouldReportDiagnostic ? "|]" : null;
 
-            return string.Format(@"
+            return string.Format(CultureInfo.InvariantCulture, @"
 using RockLib.Logging;
 using System;
 using System.Collections.Generic;
@@ -356,3 +356,4 @@ public class TestClass
         }
     }
 }
+#endif

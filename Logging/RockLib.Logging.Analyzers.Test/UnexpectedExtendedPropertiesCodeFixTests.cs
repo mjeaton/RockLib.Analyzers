@@ -1,18 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Xunit;
-using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpCodeFixVerifier<
-    RockLib.Logging.Analyzers.UnexpectedExtendedPropertiesObjectAnalyzer,
-    RockLib.Logging.Analyzers.UnexpectedExtendedPropertiesCodeFixProvider>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
     public class UnexpectedExtendedPropertiesCodeFixTests
     {
-        [Fact(DisplayName = "Code fix applied when extended properties are not provided as an anonymous object")]
-        public async Task CodeFixApplied1()
+        [Fact]
+        public async Task VerifyWhenExtendedPropertiesAreNotProvidedAsAnonymousObject()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
-using RockLib.Logging;
+            await TestAssistants.VerifyCodeFixAsync<UnexpectedExtendedPropertiesObjectAnalyzer, UnexpectedExtendedPropertiesCodeFixProvider>(
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -30,8 +27,8 @@ public class Test
         var anonymousFlorp = new Florp(""alakazam"");
         [|logger.Info(""no good message"", anonymousFlorp)|];
     }
-}", @"
-using RockLib.Logging;
+}", 
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -49,14 +46,14 @@ public class Test
         var anonymousFlorp = new Florp(""alakazam"");
         logger.Info(""no good message"", new { anonymousFlorp });
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [Fact(DisplayName = "Code fix applied when extended properties are not provided as an anonymous object with object initializer")]
-        public async Task CodeFixApplied2()
+        [Fact]
+        public async Task VerifyWhenExtendedPropertiesAreNotProvidedAsAnonymousObjectWithInitializer()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
-using RockLib.Logging;
+            await TestAssistants.VerifyCodeFixAsync<UnexpectedExtendedPropertiesObjectAnalyzer, UnexpectedExtendedPropertiesCodeFixProvider>(
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -73,8 +70,8 @@ public class Test
     {
         [|logger.Info(""no good message"", new Florp(""greninja""))|];
     }
-}", @"
-using RockLib.Logging;
+}", 
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -91,14 +88,14 @@ public class Test
     {
         logger.Info(""no good message"", new { Florp = new Florp(""greninja"") });
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [Fact(DisplayName = "Code fix applied when extended properties are not provided as an anonymous in Logging method")]
-        public async Task CodeFixApplied3()
+        [Fact]
+        public async Task VerifyWhenExtendedPropertiesAreNotProvidedAsAnonymousObjectInLoggingMethod()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
-using RockLib.Logging;
+            await TestAssistants.VerifyCodeFixAsync<UnexpectedExtendedPropertiesObjectAnalyzer, UnexpectedExtendedPropertiesCodeFixProvider>(
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -116,8 +113,8 @@ public class Test
         var logEntry = [|new LogEntry(""no good message"", extendedProperties: new Florp(""frogadier""))|];
         logger.Log(logEntry);
     }
-}", @"
-using RockLib.Logging;
+}", 
+@"using RockLib.Logging;
 using System;
 public class Florp
 {
@@ -135,7 +132,7 @@ public class Test
         var logEntry = new LogEntry(""no good message"", extendedProperties: new { Florp = new Florp(""frogadier"") });
         logger.Log(logEntry);
     }
-}");
+}").ConfigureAwait(false);
         }
     }
 }

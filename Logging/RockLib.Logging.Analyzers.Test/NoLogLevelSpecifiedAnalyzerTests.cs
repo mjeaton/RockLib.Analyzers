@@ -1,17 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Xunit;
-using RockLibVerifier = RockLib.Logging.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.Analyzers.NoLogLevelSpecifiedAnalyzer>;
 
 namespace RockLib.Logging.Analyzers.Test
 {
-    public class NoLogLevelSpecifiedAnalyzerTests
+    public static class NoLogLevelSpecifiedAnalyzerTests
     {
-        [Fact(DisplayName = null)]
-        public async Task DiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenLevelIsNotSet()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
+            await TestAssistants.VerifyAnalyzerAsync<NoLogLevelSpecifiedAnalyzer>(
+@"using RockLib.Logging;
 using System;
 
 public class Test
@@ -28,14 +26,14 @@ public class Test
         LogEntry logEntry2 = new LogEntry(""Hello, world!"");
         logger.Log([|logEntry2|]);
     }
-}");
+}").ConfigureAwait(false);
         }
 
-        [Fact(DisplayName = null)]
-        public async Task NoDiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenLevelIsSet()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging;
+            await TestAssistants.VerifyAnalyzerAsync<NoLogLevelSpecifiedAnalyzer>(
+@"using RockLib.Logging;
 using System;
 
 public class Test
@@ -56,7 +54,7 @@ public class Test
         logEntry3.Level = LogLevel.Error;
         logger.Log(logEntry3);
     }
-}");
+}").ConfigureAwait(false);
         }
     }
 }

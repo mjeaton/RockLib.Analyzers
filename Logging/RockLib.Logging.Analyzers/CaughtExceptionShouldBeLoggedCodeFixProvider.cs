@@ -16,30 +16,30 @@ using System.Threading.Tasks;
 namespace RockLib.Logging.Analyzers
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(CaughtExceptionShouldBeLoggedCodeFixProvider)), Shared]
-    public class CaughtExceptionShouldBeLoggedCodeFixProvider : CodeFixProvider
+    public sealed class CaughtExceptionShouldBeLoggedCodeFixProvider : CodeFixProvider
     {
         public const string PassExceptionToLogEntryConstructorTitle = "Pass exception to LogEntry constructor";
         public const string SetLogEntryExceptionPropertyTitle = "Set LogEntry.Exception property";
         public const string PassExceptionToLoggingExtensionMethodTitle = "Pass exception to logging extension method";
+        
+        public override sealed ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.CaughtExceptionShouldBeLogged);
 
-        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.CaughtExceptionShouldBeLogged);
+        public override sealed FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
-        public sealed override FixAllProvider GetFixAllProvider() => null;
-
-        public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
+        public async override sealed Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
-            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+            var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+            var semanticModel = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
 
             foreach (var diagnostic in context.Diagnostics)
             {
                 var node = root.FindNode(diagnostic.Location.SourceSpan);
-                var invocationOperation = (IInvocationOperation)semanticModel.GetOperation(node);
+                var invocationOperation = (IInvocationOperation)semanticModel.GetOperation(node)!;
 
                 if (invocationOperation.TargetMethod.Name == "Log")
                 {
                     var logEntryArgument = invocationOperation.Arguments[0];
-                    var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
+                    var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation()!;
 
                     if (logEntryCreation.Arguments.Length > 0)
                     {
@@ -81,19 +81,19 @@ namespace RockLib.Logging.Analyzers
             IObjectCreationOperation logEntryCreationOperation,
             CancellationToken cancellationToken)
         {
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             var exceptionParameter = GetExceptionParameter(invocationOperation, out var needToFixCatchClause);
 
             var logEntryCreationExpression = (BaseObjectCreationExpressionSyntax)logEntryCreationOperation.Syntax;
-            var arguments = AddExceptionArgument(logEntryCreationExpression.ArgumentList.Arguments, exceptionParameter, logEntryCreationOperation.Arguments);
+            var arguments = AddExceptionArgument(logEntryCreationExpression.ArgumentList!.Arguments, exceptionParameter, logEntryCreationOperation.Arguments);
 
             var replacementLogEntryCreationExpression = logEntryCreationExpression.WithArgumentList(
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments)));
 
             if (needToFixCatchClause)
             {
-                return await FixCatchClause(invocationOperation, document, root, logEntryCreationExpression, replacementLogEntryCreationExpression, cancellationToken);
+                return await FixCatchClause(invocationOperation, document, root, logEntryCreationExpression, replacementLogEntryCreationExpression, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -108,7 +108,7 @@ namespace RockLib.Logging.Analyzers
             IObjectCreationOperation logEntryCreationOperation,
             CancellationToken cancellationToken)
         {
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             var exceptionParameter = GetExceptionParameter(invocationOperation, out var needToFixCatchClause);
 
@@ -120,13 +120,13 @@ namespace RockLib.Logging.Analyzers
             var logEntryCreationExpression = (BaseObjectCreationExpressionSyntax)logEntryCreationOperation.Syntax;
             BaseObjectCreationExpressionSyntax replacementLogEntryCreationExpression;
 
-            if (logEntryCreationOperation.Initializer != null
+            if (logEntryCreationOperation.Initializer is not null
                 && logEntryCreationOperation.Initializer.Initializers.Length > 0)
             {
-                var expressions = logEntryCreationExpression.Initializer.Expressions.ToList();
+                var expressions = logEntryCreationExpression.Initializer!.Expressions.ToList();
                 var replaced = false;
 
-                for (int i = 0; i < expressions.Count; i++)
+                for (var i = 0; i < expressions.Count; i++)
                 {
                     if (expressions[i] is AssignmentExpressionSyntax assignment
                         && assignment.Left is IdentifierNameSyntax identifier
@@ -161,7 +161,7 @@ namespace RockLib.Logging.Analyzers
 
             if (needToFixCatchClause)
             {
-                return await FixCatchClause(invocationOperation, document, root, logEntryCreationExpression, replacementLogEntryCreationExpression, cancellationToken);
+                return await FixCatchClause(invocationOperation, document, root, logEntryCreationExpression, replacementLogEntryCreationExpression, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -175,7 +175,7 @@ namespace RockLib.Logging.Analyzers
             Document document,
             CancellationToken cancellationToken)
         {
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             var exceptionParameter = GetExceptionParameter(invocationOperation, out var needToFixCatchClause);
 
@@ -187,7 +187,7 @@ namespace RockLib.Logging.Analyzers
 
             if (needToFixCatchClause)
             {
-                return await FixCatchClause(invocationOperation, document, root, invocationExpression, replacementInvocationExpression, cancellationToken);
+                return await FixCatchClause(invocationOperation, document, root, invocationExpression, replacementInvocationExpression, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -202,13 +202,13 @@ namespace RockLib.Logging.Analyzers
             var exceptionArgument = SyntaxFactory.Argument(exceptionParameter);
             var arguments = argumentsToFix.ToList();
 
-            if (!arguments.Any(a => a.NameColon != null))
+            if (!arguments.Any(a => a.NameColon is not null))
             {
                 if (argumentOperations
-                    .FirstOrDefault(a => a.Parameter.Name == "exception")
+                    .FirstOrDefault(a => a.Parameter!.Name == "exception")
                     ?.Syntax is ArgumentSyntax existingExceptionArgument)
                 {
-                    for (int i = 0; i < arguments.Count; i++)
+                    for (var i = 0; i < arguments.Count; i++)
                     {
                         if (arguments[i] == existingExceptionArgument)
                         {
@@ -227,10 +227,10 @@ namespace RockLib.Logging.Analyzers
                 exceptionArgument = exceptionArgument.WithNameColon(SyntaxFactory.NameColon("exception"));
 
                 if (argumentOperations
-                    .FirstOrDefault(a => a.Parameter.Name == "exception")
+                    .FirstOrDefault(a => a.Parameter!.Name == "exception")
                     ?.Syntax is ArgumentSyntax existingExceptionArgument)
                 {
-                    for (int i = 0; i < arguments.Count; i++)
+                    for (var i = 0; i < arguments.Count; i++)
                     {
                         if (arguments[i] == existingExceptionArgument)
                         {
@@ -250,7 +250,7 @@ namespace RockLib.Logging.Analyzers
 
         private static IdentifierNameSyntax GetExceptionParameter(IInvocationOperation invocationOperation, out bool needToFixCatchClause)
         {
-            var catchClause = GetCatchClause(invocationOperation);
+            var catchClause = GetCatchClause(invocationOperation)!;
 
             if (catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
             {
@@ -265,7 +265,7 @@ namespace RockLib.Logging.Analyzers
         private static async Task<Document> FixCatchClause(IInvocationOperation invocationOperation, Document document,
             SyntaxNode root, SyntaxNode expression, SyntaxNode replacementExpression, CancellationToken cancellationToken)
         {
-            var catchClause = GetCatchClause(invocationOperation.Syntax);
+            var catchClause = GetCatchClause(invocationOperation.Syntax)!;
 
             bool checkImportsForSystem;
 
@@ -274,7 +274,7 @@ namespace RockLib.Logging.Analyzers
             var replacementCatchClause = catchClause.ReplaceNode(expression, replacementExpression);
 
             TypeSyntax exceptionType;
-            if (catchClause.Declaration == null)
+            if (catchClause.Declaration is null)
             {
                 replacementCatchClause = replacementCatchClause
                     .WithCatchKeyword(catchClause.CatchKeyword.WithTrailingTrivia(SyntaxFactory.ParseTrailingTrivia(" ")));
@@ -299,31 +299,35 @@ namespace RockLib.Logging.Analyzers
             {
                 var name = SyntaxFactory.IdentifierName("System");
                 root = compilationUnit.AddUsings(SyntaxFactory.UsingDirective(name));
-                return await Formatter.OrganizeImportsAsync(document.WithSyntaxRoot(root), cancellationToken);
+                return await Formatter.OrganizeImportsAsync(document.WithSyntaxRoot(root), cancellationToken).ConfigureAwait(false);
             }
 
             return document.WithSyntaxRoot(root);
         }
 
-        private static ICatchClauseOperation GetCatchClause(IInvocationOperation invocationOperation)
+        private static ICatchClauseOperation? GetCatchClause(IInvocationOperation invocationOperation)
         {
             var parent = invocationOperation.Parent;
-            while (parent != null)
+            while (parent is not null)
             {
                 if (parent is ICatchClauseOperation catchClause)
+                {
                     return catchClause;
+                }
                 parent = parent.Parent;
             }
             return null;
         }
 
-        private static CatchClauseSyntax GetCatchClause(SyntaxNode node)
+        private static CatchClauseSyntax? GetCatchClause(SyntaxNode node)
         {
             var parent = node.Parent;
-            while (parent != null)
+            while (parent is not null)
             {
                 if (parent is CatchClauseSyntax catchClause)
+                {
                     return catchClause;
+                }
                 parent = parent.Parent;
             }
             return null;

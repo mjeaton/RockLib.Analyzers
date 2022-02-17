@@ -4,34 +4,39 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
-    public static class CommonExtensions
+    internal static class CommonExtensions
     {
-        public static bool IsException(this ITypeSymbol typeSymbol, ITypeSymbol exceptionType, Compilation compilation)
+        internal static bool IsException(this ITypeSymbol typeSymbol, ITypeSymbol exceptionType, Compilation compilation)
         {
             return compilation.ClassifyCommonConversion(typeSymbol, exceptionType).IsImplicit;
         }
 
-        public static IObjectCreationOperation GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)
+        internal static IObjectCreationOperation? GetLogEntryCreationOperation(this IArgumentOperation logEntryArgument)
         {
             if (logEntryArgument.Value is IObjectCreationOperation objectCreation)
+            {
                 return objectCreation;
+            }
 
             if (logEntryArgument.Value is ILocalReferenceOperation localReference)
+            {
                 return Find<IObjectCreationOperation>.For(localReference);
+            }
 
             return null;
         }
 
-        public static bool TryGetAnonymousObjectCreationOperation(this IOperation extendedPropertiesArgumentValue,
-                out IAnonymousObjectCreationOperation anonymousObjectCreationOperation)
+        internal static bool TryGetAnonymousObjectCreationOperation(this IOperation extendedPropertiesArgumentValue,
+            [NotNullWhen(true)] out IAnonymousObjectCreationOperation? anonymousObjectCreationOperation)
         {
             anonymousObjectCreationOperation = null;
 
-            if (extendedPropertiesArgumentValue.Type.IsAnonymousType)
+            if (extendedPropertiesArgumentValue.Type!.IsAnonymousType)
             {
                 anonymousObjectCreationOperation = extendedPropertiesArgumentValue as IAnonymousObjectCreationOperation;
 
@@ -42,13 +47,13 @@ namespace RockLib.Logging.Analyzers
                 }
             }
 
-            return anonymousObjectCreationOperation != null;
+            return anonymousObjectCreationOperation is not null;
         }
 
-        public static bool TryGetDictionaryExtendedPropertyValueOperations(this IOperation extendedPropertiesArgumentValue,
-            out IEnumerable<IOperation> operations)
+        internal static bool TryGetDictionaryExtendedPropertyValueOperations(this IOperation extendedPropertiesArgumentValue,
+            out IEnumerable<IOperation?> operations)
         {
-            if (extendedPropertiesArgumentValue.Type.IsStringDictionaryType())
+            if (extendedPropertiesArgumentValue.Type!.IsStringDictionaryType())
             {
                 if (extendedPropertiesArgumentValue is ILocalReferenceOperation localReference)
                 {
@@ -66,29 +71,35 @@ namespace RockLib.Logging.Analyzers
             return false;
         }
 
-        public static IEnumerable<IPropertySymbol> GetPublicProperties(this ITypeSymbol type)
+        internal static IEnumerable<IPropertySymbol> GetPublicProperties(this ITypeSymbol type)
         {
             if (type.SpecialType == SpecialType.System_Object)
+            {
                 return Enumerable.Empty<IPropertySymbol>();
+            }
 
             var properties = GetProperties(type);
 
             while (true)
             {
-                type = type.BaseType;
-                if (type == null || type.SpecialType == SpecialType.System_Object)
+                type = type.BaseType!;
+
+                if (type is null || type.SpecialType == SpecialType.System_Object)
+                {
                     break;
+                }
+
                 properties = properties.Concat(GetProperties(type));
             }
 
             return properties;
 
-            IEnumerable<IPropertySymbol> GetProperties(ITypeSymbol t) =>
+            static IEnumerable<IPropertySymbol> GetProperties(ITypeSymbol t) =>
                 t.GetMembers().OfType<IPropertySymbol>().Where(p =>
                     p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
         }
 
-        public static bool IsValueType(this ITypeSymbol type)
+        internal static bool IsValueType(this ITypeSymbol type)
         {
             switch (type.SpecialType)
             {
@@ -112,24 +123,19 @@ namespace RockLib.Logging.Analyzers
                     return true;
             }
 
-            if (type.BaseType != null && type.BaseType.ToString() == "System.Enum")
-                return true;
-
-            switch (type.ToString())
+            if (type.BaseType is not null && type.BaseType.ToString() == "System.Enum")
             {
-                case "System.TimeSpan":
-                case "System.DateTimeOffset":
-                case "System.Guid":
-                case "System.Uri":
-                case "System.Type":
-                case "System.Text.Encoding":
-                    return true;
+                return true;
             }
 
-            return false;
+            return type.ToString() switch
+            {
+                "System.TimeSpan" or "System.DateTimeOffset" or "System.Guid" or "System.Uri" or "System.Type" or "System.Text.Encoding" => true,
+                _ => false,
+            };
         }
 
-        public static bool IsStringDictionaryType(this ITypeSymbol typeSymbol) =>
+        internal static bool IsStringDictionaryType(this ITypeSymbol typeSymbol) =>
             (typeSymbol is INamedTypeSymbol namedType && IsStringDictionary(namedType))
             || typeSymbol.Interfaces.Any(IsStringDictionary);
 
@@ -139,12 +145,12 @@ namespace RockLib.Logging.Analyzers
                 && type.TypeArguments.Length == 2
                 && type.TypeArguments[0].SpecialType == SpecialType.System_String;
 
-        private static IEnumerable<IOperation> GetDictionaryExtendedPropertyValueOperations(
+        private static IEnumerable<IOperation?> GetDictionaryExtendedPropertyValueOperations(
             IOperation extendedPropertiesArgumentValue, ISymbol extendedPropertiesSymbol)
         {
             var rootOperation = extendedPropertiesArgumentValue.GetRootOperation();
 
-            var semanticModel = rootOperation.SemanticModel;
+            var semanticModel = rootOperation.SemanticModel!;
             var descendants = rootOperation.Syntax.DescendantNodes(rootOperation.Syntax.GetLocation().SourceSpan);
 
             var addMethodValues = descendants
@@ -162,17 +168,19 @@ namespace RockLib.Logging.Analyzers
             var extendedPropertyValues = addMethodValues
                 .Concat(indexerAssignmentValues)
                 .Concat(localDeclarationCollectionInitializerValues)
-                .Where(value => value != null)
+                .Where(value => value is not null)
                 .Select(operation =>
                 {
                     if (operation is IConversionOperation conversionOperation)
+                    {
                         return conversionOperation.Operand;
+                    }
                     return operation;
                 });
 
             return extendedPropertyValues;
 
-            IOperation TryGetDictionaryAddMethodValue(SyntaxNode node)
+            IOperation? TryGetDictionaryAddMethodValue(SyntaxNode node)
             {
                 if (semanticModel.GetOperation(node) is IInvocationOperation operation)
                 {
@@ -201,7 +209,7 @@ namespace RockLib.Logging.Analyzers
                 return null;
             }
 
-            IOperation TryGetDictionaryIndexerAssignmentValue(SyntaxNode node)
+            IOperation? TryGetDictionaryIndexerAssignmentValue(SyntaxNode node)
             {
                 if (((ExpressionStatementSyntax)node).Expression is AssignmentExpressionSyntax assignmentExpression
                     && semanticModel.GetOperation(assignmentExpression) is ISimpleAssignmentOperation assignmentOperation
@@ -211,7 +219,7 @@ namespace RockLib.Logging.Analyzers
                         || ((propertyReferenceOperation.Instance is IParameterReferenceOperation parameterReference
                             && SymbolEqualityComparer.Default.Equals(parameterReference.Parameter, extendedPropertiesSymbol))))
                     && propertyReferenceOperation.Arguments.Length == 1
-                    && propertyReferenceOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String)
+                    && propertyReferenceOperation.Arguments[0].Value.Type!.SpecialType == SpecialType.System_String)
                 {
                     return assignmentOperation.Value;
                 }
@@ -223,10 +231,10 @@ namespace RockLib.Logging.Analyzers
                 var declaration = ((LocalDeclarationStatementSyntax)node).Declaration;
                 foreach (var variable in declaration.Variables)
                 {
-                    var variableDeclarator = (IVariableDeclaratorOperation)semanticModel.GetOperation(variable);
+                    var variableDeclarator = (IVariableDeclaratorOperation)semanticModel.GetOperation(variable)!;
                     if (SymbolEqualityComparer.Default.Equals(variableDeclarator.Symbol, extendedPropertiesSymbol)
                         && variableDeclarator.Initializer?.Value is IObjectCreationOperation objectCreation
-                        && objectCreation.Initializer != null)
+                        && objectCreation.Initializer is not null)
                     {
                         foreach (var initializer in objectCreation.Initializer.Initializers)
                         {
@@ -239,7 +247,7 @@ namespace RockLib.Logging.Analyzers
                             else if (initializer is ISimpleAssignmentOperation assignmentOperation
                                 && assignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation
                                 && propertyReferenceOperation.Arguments.Length == 1
-                                && propertyReferenceOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String)
+                                && propertyReferenceOperation.Arguments[0].Value.Type!.SpecialType == SpecialType.System_String)
                             {
                                 yield return assignmentOperation.Value;
                             }
@@ -249,15 +257,15 @@ namespace RockLib.Logging.Analyzers
             }
         }
 
-        private class Find<TOperation> : OperationWalker
+        private sealed class Find<TOperation> : OperationWalker
             where TOperation : IOperation
         {
             private readonly ILocalSymbol _localSymbol;
-            private TOperation _foundOperation;
+            private TOperation? _foundOperation;
 
             private Find(ILocalSymbol localSymbol) => _localSymbol = localSymbol;
 
-            public static TOperation For(ILocalReferenceOperation localReferenceOperation)
+            internal static TOperation? For(ILocalReferenceOperation localReferenceOperation)
             {
                 var operationWalker = new Find<TOperation>(localReferenceOperation.Local);
                 operationWalker.Visit(localReferenceOperation.GetRootOperation());

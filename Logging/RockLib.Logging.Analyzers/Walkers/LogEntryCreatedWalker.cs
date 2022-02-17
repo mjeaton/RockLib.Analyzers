@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
-    internal class LogEntryCreatedWalker : OperationWalker
+    internal sealed class LogEntryCreatedWalker : OperationWalker
     {
         private readonly IOperation _logEntryArgumentValue;
         private readonly IObjectCreationOperation _createOperation;
@@ -21,6 +21,7 @@ namespace RockLib.Logging.Analyzers
             _createOperation = createOperation;
             _exceptionType = exceptionType;
             _compilation = compilation;
+            Visit(createOperation.GetRootOperation());
         }
 
         public bool IsExceptionSet { get; private set; }
@@ -28,12 +29,14 @@ namespace RockLib.Logging.Analyzers
         public override void VisitCatchClause(ICatchClauseOperation catchClause)
         {
             if (IsExceptionSet)
+            {
                 return;
+            }
 
             if (_createOperation.Arguments.Length > 0)
             {
-                var exceptionArgument = _createOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-                if (exceptionArgument != null
+                var exceptionArgument = _createOperation.Arguments.FirstOrDefault(a => a.Parameter!.Name == "exception");
+                if (exceptionArgument is not null
                     && !exceptionArgument.IsImplicit
                     && exceptionArgument.Value is ILocalReferenceOperation localReference
                     && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator
@@ -42,20 +45,20 @@ namespace RockLib.Logging.Analyzers
                     IsExceptionSet = true;
                     return;
                 }
-                else if (exceptionArgument != null
+                else if (exceptionArgument is not null
                     && exceptionArgument.Value is IConversionOperation conversion
                     && conversion.Operand is ILocalReferenceOperation convertedLocalReference
                     && !conversion.ConstantValue.HasValue
                     && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation catchVariableDeclarator)
                 {
                     var doesCaughtExceptionMatchArgument = SymbolEqualityComparer.Default.Equals(convertedLocalReference.Local, catchVariableDeclarator.Symbol);
-                    IsExceptionSet = conversion.Type.IsException(_exceptionType, _compilation)
+                    IsExceptionSet = conversion.Type!.IsException(_exceptionType, _compilation)
                        && doesCaughtExceptionMatchArgument;
                     return;
                 }
             }
 
-            if (_createOperation.Initializer != null)
+            if (_createOperation.Initializer is not null)
             {
                 foreach (var initializer in _createOperation.Initializer.Initializers)
                 {
@@ -87,8 +90,7 @@ namespace RockLib.Logging.Analyzers
 
             if (_logEntryArgumentValue is ILocalReferenceOperation logEntryReference)
             {
-                var visitor = new SimpleAssignmentWalker(logEntryReference);
-                visitor.Visit(_createOperation.GetRootOperation());
+                var visitor = new SimpleAssignmentWalker(logEntryReference, _createOperation.GetRootOperation());
                 IsExceptionSet = visitor.IsExceptionSet;
                 return;
             }

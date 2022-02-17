@@ -7,13 +7,14 @@ using RockLib.Analyzers.Common;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class ExtendedPropertyNotMarkedSafeToLogAnalyzer : DiagnosticAnalyzer
+    public sealed class ExtendedPropertyNotMarkedSafeToLogAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Extended property not marked as safe to log";
         private static readonly LocalizableString _messageFormat = "The '{0}' type does not have any properties marked as safe to log";
@@ -27,12 +28,13 @@ namespace RockLib.Logging.Analyzers
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog));
+            helpLinkUri: string.Format(CultureInfo.InvariantCulture, HelpLinkUri.Format, DiagnosticIds.ExtendedPropertyNotMarkedSafeToLog));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context is null) { throw new ArgumentNullException(nameof(context)); }
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -41,20 +43,16 @@ namespace RockLib.Logging.Analyzers
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
             var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
-            if (logEntryType == null)
-                return;
+            if (logEntryType is null) { return; }
 
             var safeLoggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
-            if (safeLoggingExtensionsType == null)
-                return;
+            if (safeLoggingExtensionsType is null) { return; }
 
             var safeToLogAttributeType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeToLogAttribute");
-            if (safeToLogAttributeType == null)
-                return;
+            if (safeToLogAttributeType is null) { return; }
 
             var notSafeToLogAttributeType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.NotSafeToLogAttribute");
-            if (notSafeToLogAttributeType == null)
-                return;
+            if (notSafeToLogAttributeType is null) { return; }
 
             var analyzer = new InvocationOperationAnalyzer(logEntryType, safeLoggingExtensionsType,
                 safeToLogAttributeType, notSafeToLogAttributeType, context.Compilation, context.CancellationToken);
@@ -62,7 +60,7 @@ namespace RockLib.Logging.Analyzers
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
-        private class InvocationOperationAnalyzer
+        private sealed class InvocationOperationAnalyzer
         {
             private readonly INamedTypeSymbol _logEntryType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
@@ -89,15 +87,25 @@ namespace RockLib.Logging.Analyzers
                 var methodSymbol = invocationOperation.TargetMethod;
 
                 if (methodSymbol.MethodKind != MethodKind.Ordinary)
+                {
                     return;
+                }
 
                 if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
+                {
                     AnalyzeExtendedPropertiesArgument(context, invocationOperation);
+                }
                 else if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _logEntryType))
+                {
                     if (methodSymbol.Name == "SetSanitizedExtendedProperty")
+                    {
                         AnalyzeSetSanitizedExtendedPropertyMethodCall(context, invocationOperation);
+                    }
                     else if (methodSymbol.Name == "SetSanitizedExtendedProperties")
+                    {
                         AnalyzeExtendedPropertiesArgument(context, invocationOperation);
+                    }
+                }
             }
 
             private void AnalyzeSetSanitizedExtendedPropertyMethodCall(OperationAnalysisContext context,
@@ -105,7 +113,7 @@ namespace RockLib.Logging.Analyzers
             {
                 var valueArgument = invocationOperation.Arguments[1];
                 if (valueArgument.Value is IConversionOperation convertToObjectType
-                    && convertToObjectType.Type.SpecialType == SpecialType.System_Object)
+                    && convertToObjectType.Type!.SpecialType == SpecialType.System_Object)
                 {
                     AnalyzePropertyValue(convertToObjectType.Operand, context.ReportDiagnostic);
                 }
@@ -114,11 +122,11 @@ namespace RockLib.Logging.Analyzers
             private void AnalyzeExtendedPropertiesArgument(OperationAnalysisContext context, IInvocationOperation invocationOperation)
             {
                 var extendedPropertiesArgument = invocationOperation.Arguments
-                        .FirstOrDefault(argument => argument.Parameter.Name == "extendedProperties");
+                        .FirstOrDefault(argument => argument.Parameter!.Name == "extendedProperties");
 
-                if (extendedPropertiesArgument == null
+                if (extendedPropertiesArgument is null
                     || !(extendedPropertiesArgument.Value is IConversionOperation convertToObjectType)
-                    || convertToObjectType.Type.SpecialType != SpecialType.System_Object)
+                    || convertToObjectType.Type!.SpecialType != SpecialType.System_Object)
                 {
                     return;
                 }
@@ -133,14 +141,18 @@ namespace RockLib.Logging.Analyzers
                 else if (extendedPropertiesArgumentValue.TryGetDictionaryExtendedPropertyValueOperations(out var dictionaryExtendedPropertyValues))
                 {
                     foreach (var extendedPropertyValue in dictionaryExtendedPropertyValues)
-                        AnalyzePropertyValue(extendedPropertyValue, context.ReportDiagnostic);
+                    {
+                        AnalyzePropertyValue(extendedPropertyValue!, context.ReportDiagnostic);
+                    }
                 }
             }
 
             private void AnalyzePropertyValue(IOperation propertyValue, Action<Diagnostic> reportDiagnostic)
             {
                 if (propertyValue.Type is null || propertyValue.Type.IsValueType())
+                {
                     return;
+                }
 
                 var publicProperties = propertyValue.Type.GetPublicProperties();
                 GetRuntimeDecorateTargets(out var runtimeSafeToLogTargets, out var runtimeNotSafeToLogTargets);
@@ -148,12 +160,16 @@ namespace RockLib.Logging.Analyzers
                 if (IsDecoratedWithSafeToLogAttribute(propertyValue.Type, runtimeSafeToLogTargets))
                 {
                     if (publicProperties.Any(p => IsNotDecoratedWithNotSafeToLogAttribute(p, runtimeNotSafeToLogTargets)))
+                    {
                         return;
+                    }
                 }
                 else
                 {
                     if (publicProperties.Any(p => IsDecoratedWithSafeToLogAttribute(p, runtimeSafeToLogTargets)))
+                    {
                         return;
+                    }
                 }
 
                 // "The '{0}' type does not have any properties marked as safe to log"
@@ -165,8 +181,7 @@ namespace RockLib.Logging.Analyzers
                 out IReadOnlyList<ISymbol> runtimeSafeToLogTargets,
                 out IReadOnlyList<ISymbol> runtimeNotSafeToLogTargets)
             {
-                var visitor = new SyntaxWalker(_safeToLogAttributeType, _notSafeToLogAttributeType, _cancellationToken);
-                visitor.Visit(_compilation);
+                var visitor = new SyntaxWalker(_safeToLogAttributeType, _notSafeToLogAttributeType, _compilation, _cancellationToken);
                 runtimeSafeToLogTargets = visitor.SafeToLogTargets;
                 runtimeNotSafeToLogTargets = visitor.NotSafeToLogTargets;
             }
@@ -183,39 +198,42 @@ namespace RockLib.Logging.Analyzers
                 && !notSafeToLogDecorateTargets.Any(target =>
                     SymbolEqualityComparer.Default.Equals(symbol, target));
 
-            private class SyntaxWalker : CSharpSyntaxWalker
+            private sealed class SyntaxWalker : CSharpSyntaxWalker
             {
                 private readonly List<ISymbol> _safeToLogTargets = new List<ISymbol>();
                 private readonly List<ISymbol> _notSafeToLogTargets = new List<ISymbol>();
                 private readonly INamedTypeSymbol _safeToLogAttributeType;
                 private readonly INamedTypeSymbol _notSafeToLogAttributeType;
                 private readonly CancellationToken _cancellationToken;
-                private Compilation _compilation;
+                private readonly Compilation _compilation;
 
-                public SyntaxWalker(INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType, CancellationToken cancellationToken)
+                // TODO: Pass the compilation in on construction
+                // and call Visit(compilation) right away...well, the "root" one.
+                // Make sure tests pass first.
+                public SyntaxWalker(INamedTypeSymbol safeToLogAttributeType, INamedTypeSymbol notSafeToLogAttributeType, 
+                    Compilation compilation, CancellationToken cancellationToken)
                 {
                     _safeToLogAttributeType = safeToLogAttributeType;
                     _notSafeToLogAttributeType = notSafeToLogAttributeType;
                     _cancellationToken = cancellationToken;
+                    _compilation = compilation;
+
+                    foreach (var syntaxTree in compilation.SyntaxTrees)
+                    {
+                        Visit(syntaxTree.GetRoot(_cancellationToken));
+                    }
                 }
 
                 public IReadOnlyList<ISymbol> SafeToLogTargets => _safeToLogTargets;
                 
                 public IReadOnlyList<ISymbol> NotSafeToLogTargets => _notSafeToLogTargets;
 
-                public void Visit(Compilation compilation)
-                {
-                    _compilation = compilation;
-                    foreach (var syntaxTree in compilation.SyntaxTrees)
-                        Visit(syntaxTree.GetRoot(_cancellationToken));
-                }
-
                 public override void VisitInvocationExpression(InvocationExpressionSyntax node)
                 {
                     if (node.Expression is MemberAccessExpressionSyntax memberAccess
                         && memberAccess.Name is SimpleNameSyntax simpleName
                         && simpleName.Identifier.Text == "Decorate"
-                        && _compilation.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
+                        && _compilation!.GetSemanticModel(node.SyntaxTree) is SemanticModel semanticModel
                         && semanticModel.GetOperation(node, _cancellationToken) is IInvocationOperation invocation)
                     {
                         if (SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.ContainingType, _safeToLogAttributeType))
@@ -231,7 +249,7 @@ namespace RockLib.Logging.Analyzers
                     base.VisitInvocationExpression(node);
                 }
 
-                private void AddTarget(IInvocationOperation invocation, IList<ISymbol> targets)
+                private static void AddTarget(IInvocationOperation invocation, IList<ISymbol> targets)
                 {
                     if (invocation.TargetMethod.TypeArguments.Length > 0)
                     {
@@ -250,7 +268,7 @@ namespace RockLib.Logging.Analyzers
                             targets.Add(property.Property);
                         }
                     }
-                    else if (invocation.Arguments[0].Parameter.Type.Name == "Type"
+                    else if (invocation.Arguments[0].Parameter!.Type.Name == "Type"
                         && invocation.Arguments[0].Value is ITypeOfOperation typeOfOperation)
                     {
                         targets.Add(typeOfOperation.TypeOperand);

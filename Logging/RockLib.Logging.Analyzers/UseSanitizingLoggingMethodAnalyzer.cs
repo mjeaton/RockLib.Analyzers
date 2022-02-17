@@ -5,12 +5,13 @@ using RockLib.Analyzers.Common;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class UseSanitizingLoggingMethodAnalyzer : DiagnosticAnalyzer
+    public sealed class UseSanitizingLoggingMethodAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Use sanitizing logging method";
         private static readonly LocalizableString _messageFormat = "Call {0} instead of {1} in order to sanitize extended properties";
@@ -24,12 +25,13 @@ namespace RockLib.Logging.Analyzers
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.UseSanitizingLoggingMethod));
+            helpLinkUri: string.Format(CultureInfo.InvariantCulture, HelpLinkUri.Format, DiagnosticIds.UseSanitizingLoggingMethod));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context is null) { throw new ArgumentNullException(nameof(context)); }
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -38,12 +40,10 @@ namespace RockLib.Logging.Analyzers
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
             var logEntryType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LogEntry");
-            if (logEntryType == null)
-                return;
+            if (logEntryType is null) { return; }
 
             var loggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LoggingExtensions");
-            if (loggingExtensionsType == null)
-                return;
+            if (loggingExtensionsType is null) { return; }
 
             var analyzer = new OperationAnalyzer(logEntryType, loggingExtensionsType);
 
@@ -52,7 +52,7 @@ namespace RockLib.Logging.Analyzers
             context.RegisterOperationAction(analyzer.AnalyzeObjectCreation, OperationKind.ObjectCreation);
         }
 
-        private class OperationAnalyzer
+        private sealed class OperationAnalyzer
         {
             private readonly INamedTypeSymbol _logEntryType;
             private readonly INamedTypeSymbol _loggingExtensionsType;
@@ -85,9 +85,9 @@ namespace RockLib.Logging.Analyzers
                 else if ((methodSymbol.Name == "Add" || methodSymbol.Name == "TryAdd")
                     && invocationOperation.Instance is IPropertyReferenceOperation property
                     && property.Member.Name == "ExtendedProperties"
-                    && SymbolEqualityComparer.Default.Equals(property.Instance.Type, _logEntryType)
+                    && SymbolEqualityComparer.Default.Equals(property.Instance!.Type, _logEntryType)
                     && invocationOperation.Arguments[1].Value is IConversionOperation conversion
-                    && !conversion.Operand.Type.IsValueType())
+                    && !conversion.Operand.Type!.IsValueType())
                 {
                     var diagnostic = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation(),
                         "'LogEntry.SetSanitizedExtendedProperty'", "'LogEntry.ExtendedProperties." + methodSymbol.Name + "'");
@@ -101,13 +101,13 @@ namespace RockLib.Logging.Analyzers
 
                 if (assignmentOperation.Target is IPropertyReferenceOperation indexerOperation
                     && indexerOperation.Arguments.Length == 1
-                    && indexerOperation.Arguments[0].Value.Type.SpecialType == SpecialType.System_String
+                    && indexerOperation.Arguments[0].Value.Type!.SpecialType == SpecialType.System_String
                     && indexerOperation.Instance is IPropertyReferenceOperation extendedPropertiesOperation
                     && extendedPropertiesOperation.Arguments.Length == 0
                     && extendedPropertiesOperation.Property.Name == "ExtendedProperties"
                     && SymbolEqualityComparer.Default.Equals(extendedPropertiesOperation.Property.ContainingType, _logEntryType)
                     && assignmentOperation.Value is IConversionOperation conversion
-                    && !conversion.Operand.Type.IsValueType())
+                    && !conversion.Operand.Type!.IsValueType())
                 {
                     var diagnostic = Diagnostic.Create(Rule, assignmentOperation.Syntax.GetLocation(),
                         "'LogEntry.SetSanitizedExtendedProperty'", "assigning to the 'LogEntry.ExtendedProperties' indexer");
@@ -125,22 +125,22 @@ namespace RockLib.Logging.Analyzers
                 }
             }
 
-            private void AnalyzeExtendedPropertiesArgument(IEnumerable<IArgumentOperation> arguments,
+            private static void AnalyzeExtendedPropertiesArgument(IEnumerable<IArgumentOperation> arguments,
                 Action<Diagnostic> reportDiagnostic, SyntaxNode reportingNode, string recommendedFormat, string notRecommendedFormat)
             {
-                var extendedPropertiesArgument = arguments.FirstOrDefault(argument => argument.Parameter.Name == "extendedProperties");
+                var extendedPropertiesArgument = arguments.FirstOrDefault(argument => argument.Parameter!.Name == "extendedProperties");
 
-                if (extendedPropertiesArgument == null
-                        || !(extendedPropertiesArgument.Value is IConversionOperation convertToObjectType)
-                        || convertToObjectType.Type.SpecialType != SpecialType.System_Object)
+                if (extendedPropertiesArgument is null
+                    || extendedPropertiesArgument.Value is not IConversionOperation convertToObjectType
+                    || convertToObjectType.Type!.SpecialType != SpecialType.System_Object)
                     return;
 
                 var extendedPropertiesArgumentValue = convertToObjectType.Operand;
 
                 if ((extendedPropertiesArgumentValue.TryGetAnonymousObjectCreationOperation(out var anonymousObjectCreationOperation)
-                        && anonymousObjectCreationOperation.Initializers.Any(initializer => !((ISimpleAssignmentOperation)initializer).Value.Type.IsValueType()))
+                        && anonymousObjectCreationOperation.Initializers.Any(initializer => !((ISimpleAssignmentOperation)initializer).Value.Type!.IsValueType()))
                     || (extendedPropertiesArgumentValue.TryGetDictionaryExtendedPropertyValueOperations(out var dictionaryExtendedPropertyValues)
-                        && dictionaryExtendedPropertyValues.Any(value => !value.Type.IsValueType())))
+                        && dictionaryExtendedPropertyValues.Any(value => !value?.Type!.IsValueType() ?? false)))
                 {
                     var diagnostic = Diagnostic.Create(Rule, reportingNode.GetLocation(),
                         recommendedFormat, notRecommendedFormat);

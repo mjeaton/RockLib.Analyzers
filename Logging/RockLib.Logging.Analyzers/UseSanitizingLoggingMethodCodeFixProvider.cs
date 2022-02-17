@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace RockLib.Logging.Analyzers
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UseSanitizingLoggingMethodCodeFixProvider)), Shared]
-    public class UseSanitizingLoggingMethodCodeFixProvider : CodeFixProvider
+    public sealed class UseSanitizingLoggingMethodCodeFixProvider : CodeFixProvider
     {
         public const string ChangeToSetSanitizedExtendedPropertiesTitle = "Change to SetSanitizedExtendedProperties";
         public const string ChangeToSanitizingLoggingExtensionMethodTitle = "Change to sanitizing logging extension method";
@@ -23,17 +23,17 @@ namespace RockLib.Logging.Analyzers
         public const string ReplaceIndexerWithCallToSetSanitizedExtendedPropertyTitle = "Replace indexer with call to SetSanitizedExtendedProperty";
         public const string ReplaceAddMethodWithCallToSetSanitizedExtendedPropertyTitle = "Replace add method with call to SetSanitizedExtendedProperty";
 
-        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UseSanitizingLoggingMethod);
+        public override sealed ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UseSanitizingLoggingMethod);
 
-        public sealed override FixAllProvider GetFixAllProvider()
+        public override sealed FixAllProvider GetFixAllProvider()
         {
             // See https://github.com/dotnet/roslyn/blob/master/docs/analyzers/FixAllProvider.md for more information on Fix All Providers
             return WellKnownFixAllProviders.BatchFixer;
         }
 
-        public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
+        public async override sealed Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
+            var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
 
             foreach (var diagnostic in context.Diagnostics)
             {
@@ -118,8 +118,7 @@ namespace RockLib.Logging.Analyzers
             var setSanitizedExtendedPropertiesName = setExtendedPropertiesName.ReplaceToken(
                 setExtendedPropertiesName.Identifier, replacementIdentifier);
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
             root = root.ReplaceNode(setExtendedPropertiesName, setSanitizedExtendedPropertiesName);
 
             return document.WithSyntaxRoot(root);
@@ -136,7 +135,7 @@ namespace RockLib.Logging.Analyzers
             var sanitizedLoggingExtensionMethodName = loggingExtensionMethodName.ReplaceToken(
                 loggingExtensionMethodName.Identifier, replacementIdentifier);
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             root = root.ReplaceNode(loggingExtensionMethodName, sanitizedLoggingExtensionMethodName);
 
@@ -149,7 +148,7 @@ namespace RockLib.Logging.Analyzers
                         SyntaxFactory.IdentifierName("Logging")),
                     SyntaxFactory.IdentifierName("SafeLogging"));
                 root = compilationUnit.AddUsings(SyntaxFactory.UsingDirective(name));
-                return await Formatter.OrganizeImportsAsync(document.WithSyntaxRoot(root), cancellationToken);
+                return await Formatter.OrganizeImportsAsync(document.WithSyntaxRoot(root), cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -162,12 +161,12 @@ namespace RockLib.Logging.Analyzers
             ObjectCreationExpressionSyntax newLogEntryExpression,
             CancellationToken cancellationToken)
         {
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var newLogEntryOperation = (IObjectCreationOperation)semanticModel.GetOperation(newLogEntryExpression);
-            var arg = newLogEntryOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "extendedProperties");
+            var semanticModel = (await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false))!;
+            var newLogEntryOperation = (IObjectCreationOperation)semanticModel.GetOperation(newLogEntryExpression, cancellationToken)!;
+            var arg = newLogEntryOperation.Arguments.First(a => a.Parameter!.Name == "extendedProperties");
             var extendedPropertiesArg = (ArgumentSyntax)arg.Syntax;
 
-            var args = newLogEntryExpression.ArgumentList.Arguments.Where(a => a != extendedPropertiesArg);
+            var args = newLogEntryExpression.ArgumentList!.Arguments.Where(a => a != extendedPropertiesArg);
 
             var replacementNewLogEntryExpression = SyntaxFactory.ObjectCreationExpression(
                 newLogEntryExpression.Type,
@@ -181,7 +180,7 @@ namespace RockLib.Logging.Analyzers
                     SyntaxFactory.IdentifierName("SetSanitizedExtendedProperties")),
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(new[] { extendedPropertiesArg.WithNameColon(null) })));
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             root = root.ReplaceNode(newLogEntryExpression, replacementInvocation);
 
@@ -208,7 +207,7 @@ namespace RockLib.Logging.Analyzers
                 SyntaxFactory.ArgumentList(
                     SyntaxFactory.SeparatedList(new[] { propertyNameArgument, valueArgument })));
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
             
             root = root.ReplaceNode(assignment, replacementInvocation);
 
@@ -231,7 +230,7 @@ namespace RockLib.Logging.Analyzers
                     SyntaxFactory.IdentifierName("SetSanitizedExtendedProperty")),
                 invocation.ArgumentList);
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             root = root.ReplaceNode(invocation, replacementInvocation);
 

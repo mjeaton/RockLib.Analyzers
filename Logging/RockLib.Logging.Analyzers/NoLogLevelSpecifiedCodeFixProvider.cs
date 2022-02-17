@@ -14,29 +14,29 @@ using System.Threading.Tasks;
 namespace RockLib.Logging.Analyzers
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(NoLogLevelSpecifiedCodeFixProvider)), Shared]
-    public class NoLogLevelSpecifiedCodeFixProvider : CodeFixProvider
+    public sealed class NoLogLevelSpecifiedCodeFixProvider : CodeFixProvider
     {
         public const string SetLevelPropertyTo = "Set LogEntry.Level to ";
         public const string SetLevelParameterTo = "Set LogEntry.Level to ";
 
         private static readonly string[] _levels = { "Debug", "Info", "Warn", "Error", "Fatal", "Audit" };
 
-        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.NoLogLevelSpecified);
+        public override sealed ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.NoLogLevelSpecified);
 
-        public sealed override FixAllProvider GetFixAllProvider() => null;
+        public override sealed FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
-        public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
+        public async override sealed Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
-            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+            var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+            var semanticModel = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
 
             foreach (var diagnostic in context.Diagnostics)
             {
                 var node = root.FindNode(diagnostic.Location.SourceSpan);
-                var logEntryArgument = semanticModel.GetOperation(node) as IArgumentOperation;
+                var logEntryArgument = (IArgumentOperation)semanticModel.GetOperation(node)!;
                 var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
 
-                if (logEntryCreation.Arguments.Length > 0)
+                if (logEntryCreation?.Arguments.Length > 0)
                 {
                     foreach (var level in _levels)
                     {
@@ -57,7 +57,7 @@ namespace RockLib.Logging.Analyzers
                             CodeAction.Create(
                                 title: SetLevelPropertyTo + level,
                                 createChangedDocument: cancellationToken =>
-                                    SetLevelProperty(context.Document, logEntryCreation, level, cancellationToken),
+                                    SetLevelProperty(context.Document, logEntryCreation!, level, cancellationToken),
                                 equivalenceKey: nameof(SetLevelPropertyTo) + level),
                             diagnostic);
                     }
@@ -82,10 +82,10 @@ namespace RockLib.Logging.Analyzers
                     SyntaxFactory.IdentifierName("LogLevel"),
                     SyntaxFactory.IdentifierName(logLevel)));
 
-            if (logEntryCreationOperation.Initializer != null)
+            if (logEntryCreationOperation.Initializer is not null)
             {
                 replacementLogEntryCreationExpression = logEntryCreationExpression.WithInitializer(
-                    logEntryCreationExpression.Initializer.WithExpressions(
+                    logEntryCreationExpression.Initializer!.WithExpressions(
                         SyntaxFactory.SeparatedList(
                             logEntryCreationExpression.Initializer.Expressions
                                 .Concat(new[] { levelAssignment }))));
@@ -97,7 +97,7 @@ namespace RockLib.Logging.Analyzers
                         SyntaxFactory.SeparatedList<ExpressionSyntax>(new[] { levelAssignment })));
             }
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             root = root.ReplaceNode(logEntryCreationExpression, replacementLogEntryCreationExpression);
 
@@ -110,11 +110,11 @@ namespace RockLib.Logging.Analyzers
             string logLevel,
             CancellationToken cancellationToken)
         {
-            var logEntryCreationExpression = (BaseObjectCreationExpressionSyntax)logEntryCreationOperation.Syntax;
+            var logEntryCreationExpression = (BaseObjectCreationExpressionSyntax)logEntryCreationOperation.Syntax!;
 
             var levelArgument = SyntaxFactory.Argument(
                 SyntaxFactory.NameColon("level"),
-                default(SyntaxToken),
+                default,
                 SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
                     SyntaxFactory.IdentifierName("LogLevel"),
@@ -124,10 +124,10 @@ namespace RockLib.Logging.Analyzers
                 logEntryCreationExpression.WithArgumentList(
                     SyntaxFactory.ArgumentList(
                         SyntaxFactory.SeparatedList(
-                            logEntryCreationExpression.ArgumentList.Arguments
+                            logEntryCreationExpression.ArgumentList!.Arguments
                                 .Concat(new[] { levelArgument }))));
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
             root = root.ReplaceNode(logEntryCreationExpression, replacementLogEntryCreationExpression);
 

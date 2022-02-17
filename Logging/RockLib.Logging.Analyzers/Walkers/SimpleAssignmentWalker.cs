@@ -3,13 +3,14 @@ using Microsoft.CodeAnalysis.Operations;
 
 namespace RockLib.Logging.Analyzers
 {
-    internal class SimpleAssignmentWalker : OperationWalker
+    internal sealed class SimpleAssignmentWalker : OperationWalker
     {
         private readonly ILocalReferenceOperation _logEntryReference;
 
-        public SimpleAssignmentWalker(ILocalReferenceOperation logEntryReference)
+        public SimpleAssignmentWalker(ILocalReferenceOperation logEntryReference, IOperation root)
         {
             _logEntryReference = logEntryReference;
+            Visit(root);
         }
 
         public bool IsExceptionSet { get; private set; }

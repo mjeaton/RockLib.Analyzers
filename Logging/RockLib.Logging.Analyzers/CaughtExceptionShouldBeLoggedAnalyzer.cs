@@ -1,14 +1,15 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using RockLib.Analyzers.Common;
+using System;
 using System.Collections.Immutable;
+using System.Globalization;
 
 namespace RockLib.Logging.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
+    public sealed class CaughtExceptionShouldBeLoggedAnalyzer : DiagnosticAnalyzer
     {
         private static readonly LocalizableString _title = "Caught exception should be logged";
         private static readonly LocalizableString _messageFormat = "The caught exception should be passed into the logging method";
@@ -22,12 +23,13 @@ namespace RockLib.Logging.Analyzers
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: _description,
-            helpLinkUri: string.Format(HelpLinkUri.Format, DiagnosticIds.CaughtExceptionShouldBeLogged));
+            helpLinkUri: string.Format(CultureInfo.InvariantCulture, HelpLinkUri.Format, DiagnosticIds.CaughtExceptionShouldBeLogged));
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context is null) { throw new ArgumentNullException(nameof(context)); }
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
@@ -36,26 +38,22 @@ namespace RockLib.Logging.Analyzers
         private static void OnCompilationStart(CompilationStartAnalysisContext context)
         {
             var loggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.LoggingExtensions");
-            if (loggingExtensionsType == null)
-                return;
+            if (loggingExtensionsType is null) { return; }
 
             var safeLoggingExtensionsType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.SafeLogging.SafeLoggingExtensions");
-            if (safeLoggingExtensionsType == null)
-                return;
+            if (safeLoggingExtensionsType is null) { return; }
 
             var loggerType = context.Compilation.GetTypeByMetadataName("RockLib.Logging.ILogger");
-            if (loggerType == null)
-                return;
+            if (loggerType is null) { return; }
 
             var exceptionType = context.Compilation.GetTypeByMetadataName("System.Exception");
-            if (exceptionType == null)
-                return;
+            if (exceptionType is null) { return; }
 
             var analyzer = new InvocationOperationAnalyzer(loggingExtensionsType, exceptionType, safeLoggingExtensionsType, loggerType);
             context.RegisterOperationAction(analyzer.Analyze, OperationKind.Invocation);
         }
 
-        private class InvocationOperationAnalyzer
+        private sealed class InvocationOperationAnalyzer
         {
             private readonly INamedTypeSymbol _loggingExtensionsType;
             private readonly INamedTypeSymbol _safeLoggingExtensionsType;
@@ -87,10 +85,11 @@ namespace RockLib.Logging.Analyzers
                 if (SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggingExtensionsType)
                     || SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _safeLoggingExtensionsType))
                 {
-                    var visitor = new CatchParameterWalker(invocationOperation, _exceptionType, context.Compilation);
-                    visitor.Visit(catchClause);
+                    var visitor = new CatchParameterWalker(invocationOperation, _exceptionType, context.Compilation, catchClause);
                     if (visitor.IsExceptionCaught)
+                    {
                         return;
+                    }
                 }
                 else if (methodSymbol.Name == "Log"
                     && SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, _loggerType))
@@ -98,27 +97,31 @@ namespace RockLib.Logging.Analyzers
                     var logEntryArgument = invocationOperation.Arguments[0];
                     var logEntryCreation = logEntryArgument.GetLogEntryCreationOperation();
 
-                    if (logEntryCreation == null
+                    if (logEntryCreation is null
                         || IsExceptionSet(logEntryCreation, logEntryArgument.Value, catchClause, context.Compilation))
                     {
                         return;
                     }
                 }
                 else
+                {
                     return;
+                }
 
                 var diagnostic = Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation());
                 context.ReportDiagnostic(diagnostic);
             }
 
-            private ICatchClauseOperation GetCatchClause(IInvocationOperation invocationOperation)
+            private static ICatchClauseOperation? GetCatchClause(IInvocationOperation invocationOperation)
             {
                 var parent = invocationOperation.Parent;
-                while (parent != null)
+                while (parent is not null)
                 {
                     //TODO: Other catch operations?
                     if (parent is ICatchClauseOperation catchClause)
+                    {
                         return catchClause;
+                    }
                     parent = parent.Parent;
                 }
                 return null;
@@ -127,12 +130,13 @@ namespace RockLib.Logging.Analyzers
             private bool IsExceptionSet(IObjectCreationOperation logEntryCreation, IOperation logEntryArgumentValue,
                 ICatchClauseOperation catchClause, Compilation compilation)
             {
-                if (catchClause.ExceptionDeclarationOrExpression is null)
-                    return false;
+                if (catchClause.ExceptionDeclarationOrExpression is not null)
+                {
+                    var logWalker = new LogEntryCreatedWalker(logEntryArgumentValue, logEntryCreation, _exceptionType, compilation);
+                    return logWalker.IsExceptionSet;
+                }
 
-                var logWalker = new LogEntryCreatedWalker(logEntryArgumentValue, logEntryCreation, _exceptionType, compilation);
-                logWalker.Visit(logEntryCreation.GetRootOperation());
-                return logWalker.IsExceptionSet;
+                return false;
             }
         }
     }

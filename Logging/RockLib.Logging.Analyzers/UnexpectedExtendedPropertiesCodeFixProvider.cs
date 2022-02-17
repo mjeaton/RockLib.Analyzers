@@ -15,16 +15,18 @@ using System.Threading.Tasks;
 namespace RockLib.Logging.Analyzers
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UnexpectedExtendedPropertiesCodeFixProvider)), Shared]
-    public class UnexpectedExtendedPropertiesCodeFixProvider : CodeFixProvider
+    public sealed class UnexpectedExtendedPropertiesCodeFixProvider : CodeFixProvider
     {
         public const string ReplaceWithAnonymousObjectTitle = "Replace with anonymous object";
 
-        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UnexpectedExtendedPropertiesObject);
+        public override sealed ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticIds.UnexpectedExtendedPropertiesObject);
 
-        public override async Task RegisterCodeFixesAsync(CodeFixContext context)
+        public override sealed FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
+
+        public async override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
-            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+            var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+            var semanticModel = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
 
             foreach (var diagnostic in context.Diagnostics)
             {
@@ -32,8 +34,8 @@ namespace RockLib.Logging.Analyzers
                 if (node is InvocationExpressionSyntax invocation
                     && invocation.ArgumentList.Arguments.Count > 1)
                 {
-                    var methodInvocation = (IInvocationOperation)semanticModel.GetOperation(invocation, context.CancellationToken);
-                    var arg = methodInvocation.Arguments.FirstOrDefault(a => a.Parameter.Name == "extendedProperties");
+                    var methodInvocation = (IInvocationOperation)semanticModel.GetOperation(invocation, context.CancellationToken)!;
+                    var arg = methodInvocation.Arguments.First(a => a.Parameter!.Name == "extendedProperties");
 
                     context.RegisterCodeFix(
                        CodeAction.Create(
@@ -43,7 +45,7 @@ namespace RockLib.Logging.Analyzers
                 }
                 else if (node is ObjectCreationExpressionSyntax objectCreation)
                 {
-                    var newLogEntryOperation = (IObjectCreationOperation)semanticModel.GetOperation(objectCreation, context.CancellationToken);
+                    var newLogEntryOperation = (IObjectCreationOperation)semanticModel.GetOperation(objectCreation, context.CancellationToken)!;
 
                     context.RegisterCodeFix(
                         CodeAction.Create(
@@ -54,12 +56,12 @@ namespace RockLib.Logging.Analyzers
             }
         }
 
-        private async Task<Document> ChangeDocForLogEntry(ObjectCreationExpressionSyntax objectCreation, IObjectCreationOperation newLogEntryOperation, CodeFixContext context)
+        private static async Task<Document> ChangeDocForLogEntry(ObjectCreationExpressionSyntax objectCreation, IObjectCreationOperation newLogEntryOperation, CodeFixContext context)
         {
-            var docEditor = await DocumentEditor.CreateAsync(context.Document);
-            var arg = newLogEntryOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "extendedProperties");
+            var docEditor = await DocumentEditor.CreateAsync(context.Document).ConfigureAwait(false);
+            var arg = newLogEntryOperation.Arguments.First(a => a.Parameter!.Name == "extendedProperties");
             var extendedPropertiesArg = (ArgumentSyntax)arg.Syntax;
-            var goodArgs = objectCreation.ArgumentList.Arguments.Where(a => a != extendedPropertiesArg);
+            var goodArgs = objectCreation.ArgumentList!.Arguments.Where(a => a != extendedPropertiesArg);
 
             var extendedProps = CreateAnonymousObjectAsArgument(arg, true);
 
@@ -74,9 +76,9 @@ namespace RockLib.Logging.Analyzers
             return docEditor.GetChangedDocument();
         }
 
-        private async Task<Document> ChangeDocForLoggingExtension(IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, CodeFixContext context)
+        private static async Task<Document> ChangeDocForLoggingExtension(IArgumentOperation arg, InvocationExpressionSyntax invocation, IInvocationOperation invocationOperation, CodeFixContext context)
         {
-            var docEditor = await DocumentEditor.CreateAsync(context.Document);
+            var docEditor = await DocumentEditor.CreateAsync(context.Document).ConfigureAwait(false);
             var extendedProps = CreateAnonymousObjectAsArgument(arg, false);
             var invocationExpression = (InvocationExpressionSyntax)invocationOperation.Syntax;
             var arguments = UpdateArguments(invocationExpression.ArgumentList.Arguments, extendedProps.First(), invocationOperation.Arguments);
@@ -89,7 +91,7 @@ namespace RockLib.Logging.Analyzers
             return docEditor.GetChangedDocument();
         }
 
-        private IEnumerable<ArgumentSyntax> CreateAnonymousObjectAsArgument(IArgumentOperation arg, bool includeNamedColon)
+        private static IEnumerable<ArgumentSyntax> CreateAnonymousObjectAsArgument(IArgumentOperation arg, bool includeNamedColon)
         {
             var anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression();
             if (arg.Value is IConversionOperation conversion
@@ -105,7 +107,7 @@ namespace RockLib.Logging.Analyzers
                 && convertedObj.Syntax is BaseObjectCreationExpressionSyntax baseObjectCreation)
             {
                 var objectInitializerArgs = baseObjectCreation.ArgumentList;
-                var name = convertedObj.Type.Name;
+                var name = convertedObj.Type!.Name;
                 anonymousObjectCreation = SyntaxFactory.AnonymousObjectCreationExpression(
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.AnonymousObjectMemberDeclarator(
@@ -125,16 +127,16 @@ namespace RockLib.Logging.Analyzers
             return extendedPropertyArguments;
         }
 
-        private IEnumerable<ArgumentSyntax> UpdateArguments(IEnumerable<ArgumentSyntax> argumentsToFix,
+        private static IEnumerable<ArgumentSyntax> UpdateArguments(IEnumerable<ArgumentSyntax> argumentsToFix,
            ArgumentSyntax argumentSyntax, IEnumerable<IArgumentOperation> argumentOperations)
         {
             var arguments = argumentsToFix.ToList();
 
             if (argumentOperations
-                .FirstOrDefault(a => a.Parameter.Name == "extendedProperties")
+                .FirstOrDefault(a => a.Parameter!.Name == "extendedProperties")
                 ?.Syntax is ArgumentSyntax existingExceptionArgument)
             {
-                for (int i = 0; i < arguments.Count; i++)
+                for (var i = 0; i < arguments.Count; i++)
                 {
                     if (arguments[i] == existingExceptionArgument)
                     {

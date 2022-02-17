@@ -4,35 +4,40 @@ using System.Linq;
 
 namespace RockLib.Logging.Analyzers
 {
-    internal class CatchParameterWalker : OperationWalker
+    internal sealed class CatchParameterWalker : OperationWalker
     {
         private readonly IInvocationOperation _invocationOperation;
         private readonly ITypeSymbol _exceptionType;
         private readonly Compilation _compilation;
 
-        public CatchParameterWalker(IInvocationOperation invocationOperation, ITypeSymbol exceptionType, Compilation compilation)
+        internal CatchParameterWalker(IInvocationOperation invocationOperation, ITypeSymbol exceptionType, Compilation compilation,
+            ICatchClauseOperation catchClause)
         {
             _invocationOperation = invocationOperation;
             _exceptionType = exceptionType;
             _compilation = compilation;
+
+            VisitCatchClause(catchClause);
         }
 
-        public bool IsExceptionCaught { get; private set; }
+        internal bool IsExceptionCaught { get; private set; }
 
         public override void VisitCatchClause(ICatchClauseOperation catchClause)
         {
             if (catchClause.ExceptionDeclarationOrExpression is null)
+            {
                 IsExceptionCaught = true;
+            }
 
-            var argument = _invocationOperation.Arguments.FirstOrDefault(a => a.Parameter.Name == "exception");
-            if (argument == null || argument.IsImplicit)
+            var argument = _invocationOperation.Arguments.FirstOrDefault(a => a.Parameter!.Name == "exception");
+            if (argument is null || argument.IsImplicit)
             {
                 IsExceptionCaught = false;
             }
             else if (argument.Value is ILocalReferenceOperation localReference
-            && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
+                && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation variableDeclarator)
             {
-                var isException = localReference.Type.IsException(_exceptionType, _compilation);
+                var isException = localReference.Type!.IsException(_exceptionType, _compilation);
                 IsExceptionCaught = isException && SymbolEqualityComparer.Default.Equals(localReference.Local, variableDeclarator.Symbol);
             }
             else if (argument.Value is IConversionOperation conversion
@@ -40,9 +45,9 @@ namespace RockLib.Logging.Analyzers
                 && !conversion.ConstantValue.HasValue
                 && catchClause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation catchVariableDeclarator)
             {
-                var isEx = _compilation.ClassifyCommonConversion(convertedLocalReference.Type, _exceptionType).IsImplicit;
+                var isEx = _compilation.ClassifyCommonConversion(convertedLocalReference.Type!, _exceptionType).IsImplicit;
                 var doesCaughtExceptionMatchArgument = SymbolEqualityComparer.Default.Equals(convertedLocalReference.Local, catchVariableDeclarator.Symbol);
-                IsExceptionCaught = convertedLocalReference.Type.IsException(_exceptionType, _compilation) && doesCaughtExceptionMatchArgument;
+                IsExceptionCaught = convertedLocalReference.Type!.IsException(_exceptionType, _compilation) && doesCaughtExceptionMatchArgument;
             }
 
             base.VisitCatchClause(catchClause);
