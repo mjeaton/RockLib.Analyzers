@@ -11,7 +11,7 @@
 		<PackageReleaseNotes>A changelog is available at https://github.com/RockLib/RockLib.Analyzers/blob/main/Logging/CHANGELOG.md.</PackageReleaseNotes>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<PackageTags>RockLib.Logging.Analyzers, analyzers</PackageTags>
-		<PackageVersion>1.0.3</PackageVersion>
+		<PackageVersion>2.0.0</PackageVersion>
 		<RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<TargetFrameworks>netstandard2.0</TargetFrameworks>
