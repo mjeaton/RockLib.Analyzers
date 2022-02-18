@@ -1,12 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
-using RockLibVerifier = RockLib.Logging.AspNetCore.Analyzers.Test.CSharpAnalyzerVerifier<
-    RockLib.Logging.AspNetCore.Analyzers.AddInfoLogAttributeAnalyzer>;
+﻿using System.Threading.Tasks;
+using Xunit;
 
 namespace RockLib.Logging.AspNetCore.Analyzers.Test
 {
-    [TestClass]
-    public class AddInfoLogAttributeAnalyzerTests
+    public static class AddInfoLogAttributeAnalyzerTests
     {
         private const string _aspNetCoreStub = @"
 
@@ -52,11 +49,11 @@ namespace Microsoft.AspNetCore.Mvc.Filters
     }
 }";
 
-        [TestMethod("Diagnostics are reported on type and action methods when class name ends in 'Controller'")]
-        public async Task DiagnosticReported1()
+        [Fact]
+        public static async Task AnalyzeWhenClassNameEndsWithController()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using Microsoft.AspNetCore.Mvc;
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"using Microsoft.AspNetCore.Mvc;
 
 public class [|TestController|]
 {
@@ -80,14 +77,14 @@ public class [|TestController|]
     public string Qux<T>(string qux) => qux;
 
     public override string ToString() => ""TestController"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("Diagnostics are reported on type and action methods when class is decorated with [Controller] attribute")]
-        public async Task DiagnosticReported2()
+        [Fact]
+        public static async Task AnalyzeWhenMemberHasControllerAttribute()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using Microsoft.AspNetCore.Mvc;
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"using Microsoft.AspNetCore.Mvc;
 
 [Controller]
 public class [|Test|]
@@ -112,102 +109,102 @@ public class [|Test|]
     public string Qux<T>(string qux) => qux;
 
     public override string ToString() => ""TestController"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when controller is decorated with [InfoLog] attribute")]
-        public async Task NoDiagnosticsReported1()
+        [Fact]
+        public static async Task AnalyzeWhenControllerHasInfoLogAttribute()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging.AspNetCore;
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"using RockLib.Logging.AspNetCore;
 
 [InfoLog]
 public class TestController
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when action methods are decorated with [InfoLog] attribute")]
-        public async Task NoDiagnosticsReported2()
+        [Fact]
+        public static async Task AnalyzeWhenMembersHaveInfoLogAttribute()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using RockLib.Logging.AspNetCore;
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"using RockLib.Logging.AspNetCore;
 
 public class TestController
 {
     [InfoLog]
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when type is struct")]
-        public async Task NoDiagnosticsReported3()
+        [Fact]
+        public static async Task AnalyzeWhenTypeIsStruct()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-public struct TestController
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"public struct TestController
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when class is abstract")]
-        public async Task NoDiagnosticsReported4()
+        [Fact]
+        public static async Task AnalyzeWhenClassIsAbstract()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-public abstract class TestController
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"public abstract class TestController
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when class is not public")]
-        public async Task NoDiagnosticsReported5()
+        [Fact]
+        public static async Task AnalyzeWhenClassIsNotPublic()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-internal class TestController
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"internal class TestController
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when class is generic")]
-        public async Task NoDiagnosticsReported6()
+        [Fact]
+        public static async Task AnalyzeWhenClassIsGeneric()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-public class TestController<T>
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"public class TestController<T>
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when class is decorated with [NonController] attribute")]
-        public async Task NoDiagnosticsReported7()
+        [Fact]
+        public static async Task AnalyzeWhenClassHasNonControllerAttribute()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
-using Microsoft.AspNetCore.Mvc;
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(
+@"using Microsoft.AspNetCore.Mvc;
 
 [NonController]
 public class TestController
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when class is not decorated with [Controller] attribute and name does not end with 'Controller'")]
-        public async Task NoDiagnosticsReported8()
+        [Fact]
+        public static async Task AnalyzeWhenClassHasControllerAttributeAndNameDoesNotEndWithController()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(@"
 public class Test
 {
     public string Get() => ""Get"";
-}");
+}").ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when InfoLogAttribute is added to filters using generic Add method")]
-        public async Task NoDiagnosticsReported9()
+        [Fact]
+        public static async Task AnalyzeWhenInfoLogAttributeIsAddedToFiltersUsingGenericAddMethod()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging.AspNetCore;
 
@@ -225,13 +222,13 @@ public class Startup
             options.Filters.Add<InfoLogAttribute>();
         });
     }
-}" + _aspNetCoreStub);
+}" + _aspNetCoreStub).ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when InfoLogAttribute is added to filters using non-generic Add method")]
-        public async Task NoDiagnosticsReported10()
+        [Fact]
+        public static async Task AnalyzeWhenInfoLogAttributeIsAddedToFiltersUsingNonGenericAddMethod()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging.AspNetCore;
 
@@ -249,13 +246,13 @@ public class Startup
             options.Filters.Add(typeof(InfoLogAttribute));
         });
     }
-}" + _aspNetCoreStub);
+}" + _aspNetCoreStub).ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when InfoLogAttribute is added to filters using generic AddService method")]
-        public async Task NoDiagnosticsReported11()
+        [Fact]
+        public static async Task AnalyzeWhenInfoLogAttributeIsAddedToFiltersUsingGenericAddServiceMethod()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging.AspNetCore;
 
@@ -273,13 +270,13 @@ public class Startup
             options.Filters.AddService<InfoLogAttribute>();
         });
     }
-}" + _aspNetCoreStub);
+}" + _aspNetCoreStub).ConfigureAwait(false);
         }
 
-        [TestMethod("No diagnostics are reported when InfoLogAttribute is added to filters using non-generic AddService method")]
-        public async Task NoDiagnosticsReported12()
+        [Fact]
+        public static async Task AnalyzeWhenInfoLogAttributeIsAddedToFiltersUsingNonGenericAddServiceMethod()
         {
-            await RockLibVerifier.VerifyAnalyzerAsync(@"
+            await TestAssistants.VerifyAnalyzerAsync<AddInfoLogAttributeAnalyzer>(@"
 using Microsoft.Extensions.DependencyInjection;
 using RockLib.Logging.AspNetCore;
 
@@ -297,7 +294,7 @@ public class Startup
             options.Filters.AddService(typeof(InfoLogAttribute));
         });
     }
-}" + _aspNetCoreStub);
+}" + _aspNetCoreStub).ConfigureAwait(false);
         }
     }
 }

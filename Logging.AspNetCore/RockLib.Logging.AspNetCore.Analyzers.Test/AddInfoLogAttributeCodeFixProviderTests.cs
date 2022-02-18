@@ -1,19 +1,15 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
-using RockLibVerifier = RockLib.Logging.AspNetCore.Analyzers.Test.CSharpCodeFixVerifier<
-    RockLib.Logging.AspNetCore.Analyzers.AddInfoLogAttributeAnalyzer,
-    RockLib.Logging.AspNetCore.Analyzers.AddInfoLogAttributeCodeFixProvider>;
+﻿using System.Threading.Tasks;
+using Xunit;
 
 namespace RockLib.Logging.AspNetCore.Analyzers.Test
 {
-    [TestClass]
-    public class AddInfoLogAttributeCodeFixProviderTests
+    public static class AddInfoLogAttributeCodeFixProviderTests
     {
-        [TestMethod]
-        public async Task CodeFix1()
+        [Fact]
+        public static async Task CodeFix1()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
-using Microsoft.AspNetCore.Mvc;
+            await TestAssistants.VerifyCodeFixAsync<AddInfoLogAttributeAnalyzer, AddInfoLogAttributeCodeFixProvider>(
+@"using Microsoft.AspNetCore.Mvc;
 
 namespace UnitTestingNamespace
 {
@@ -23,8 +19,8 @@ namespace UnitTestingNamespace
     {
     }
 }
-", @"
-using Microsoft.AspNetCore.Mvc;
+", 
+@"using Microsoft.AspNetCore.Mvc;
 using RockLib.Logging.AspNetCore;
 
 namespace UnitTestingNamespace
@@ -36,14 +32,14 @@ namespace UnitTestingNamespace
     {
     }
 }
-");
+").ConfigureAwait(false);
         }
 
-        [TestMethod]
-        public async Task CodeFix2()
+        [Fact]
+        public static async Task CodeFix2()
         {
-            await RockLibVerifier.VerifyCodeFixAsync(@"
-using Microsoft.AspNetCore.Mvc;
+            await TestAssistants.VerifyCodeFixAsync<AddInfoLogAttributeAnalyzer, AddInfoLogAttributeCodeFixProvider>(
+@"using Microsoft.AspNetCore.Mvc;
 using RockLib.Logging.AspNetCore;
 
 namespace UnitTestingNamespace
@@ -72,8 +68,8 @@ namespace UnitTestingNamespace
         }
     }
 }
-", @"
-using Microsoft.AspNetCore.Mvc;
+", 
+@"using Microsoft.AspNetCore.Mvc;
 using RockLib.Logging.AspNetCore;
 
 namespace UnitTestingNamespace
@@ -104,7 +100,7 @@ namespace UnitTestingNamespace
         }
     }
 }
-");
+").ConfigureAwait(false);
         }
     }
 }
