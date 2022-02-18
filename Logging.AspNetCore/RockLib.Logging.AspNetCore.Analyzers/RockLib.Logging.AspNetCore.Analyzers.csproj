@@ -11,7 +11,7 @@
 		<PackageReleaseNotes>A changelog is available at https://github.com/RockLib/RockLib.Analyzers/blob/main/Logging.AspNetCore/CHANGELOG.md.</PackageReleaseNotes>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<PackageTags>RockLib.Logging.AspNetCore.Analyzers, analyzers</PackageTags>
-		<PackageVersion>1.0.2</PackageVersion>
+		<PackageVersion>2.0.0</PackageVersion>
 		<RepositoryUrl>https://github.com/RockLib/RockLib.Analyzers.git</RepositoryUrl>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
